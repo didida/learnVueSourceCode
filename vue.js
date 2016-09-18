@@ -978,7 +978,7 @@ var arrayMethods = Object.create(arrayProto) // 新对象，原型是 Array.prot
 
 /*  */
 
-var arrayKeys = Object.getOwnPropertyNames(arrayMethods)  // 一个数组，元素是array的各个方法名
+var arrayKeys = Object.getOwnPropertyNames(arrayMethods)  // 一个数组，元素是array的各个方法
 
 /**
  * By default, when a reactive property is set, the new value is
@@ -1001,13 +1001,13 @@ var Observer = function Observer (value) {
   this.value = value
   this.dep = new Dep() // 一个dep实例
   this.vmCount = 0
-  def(value, '__ob__', this) // obj key value  函数的结果的 传入的value 获得一个__ob__属性，值是一个新的Observer实例。
+  def(value, '__ob__', this) // obj key value  函数的结果的 传入的value 获得一个__ob__属性，指向返回的Observer实例。
   if (Array.isArray(value)) {  //  如果value是一个数组
     var augment = hasProto  // 如果hasProto存在
-      ? protoAugment
-      : copyAugment
-    augment(value, arrayMethods, arrayKeys)
-    this.observeArray(value)
+      ? protoAugment  // (target,src)  将target的原型指向src  target.__proto__ = src
+      : copyAugment   // (target,src,keys)  // target[key] = src[key] 默认不可枚举
+    augment(value, arrayMethods, arrayKeys)  //  
+    this.observeArray(value)  //  observe数组的每一项
   } else {
     this.walk(value)
   }
@@ -1061,58 +1061,62 @@ function copyAugment (target, src, keys) {
 
 /**
  * Attempt to create an observer instance for a value,
- * returns the new observer if successfully observed,
- * or the existing observer if the value already has one.
+ * returns the new observer if successfully observed,  返回一个新的observer
+ * or the existing observer if the value already has one.  
  */
 function observe (value) {
-  if (!isObject(value)) {
+  if (!isObject(value)) {  //  如果value不是一个对象，即原始值，则返回，什么都不做
     return
   }
-  var ob
-  if (hasOwn(value, '__ob__') && value.__ob__ instanceof Observer) {
+  var ob  
+  if (hasOwn(value, '__ob__') && value.__ob__ instanceof Observer) {  //  value的__ob__属性指向一个Observer实例
     ob = value.__ob__
   } else if (
-    observerState.shouldConvert &&
-    !config._isServer &&
-    (Array.isArray(value) || isPlainObject(value)) &&
-    Object.isExtensible(value) &&
-    !value._isVue
+    observerState.shouldConvert &&  // 是否需要convert to a reactive property
+    !config._isServer &&  // 不是服务器端渲染
+    (Array.isArray(value) || isPlainObject(value)) && // value是一个数组或者是一个对象{}
+    Object.isExtensible(value) && // value必须是可拓展的（可以向对象添加属性）
+    !value._isVue // ??
   ) {
     ob = new Observer(value)
   }
-  return ob
+  return ob //  如果value.__ob__已经指向了一个Observer实例，那么返回这个实例，如果没有指向一个实例，先检查上面条件是否全部满足，如果满足，
+            // 创建value的observer实例，反则返回 undefined
 }
 
 /**
- * Define a reactive property on an Object.
+ * Define a reactive property on an Object.  给一个对象创建一个响应式的属性
  */
 function defineReactive (
-  obj,
-  key,
-  val,
-  customSetter
+  obj,  //  对象
+  key,  //  属性
+  val,  //  值
+  customSetter  // setter
 ) {
-  var dep = new Dep()
+  var dep = new Dep()   // 一个新的dep实例
 
-  var property = Object.getOwnPropertyDescriptor(obj, key)
+  var property = Object.getOwnPropertyDescriptor(obj, key)  // 获得指定对象的指定属性的原始属性描述符
   if (property && property.configurable === false) {
     return
-  }
+  }  // 如果不可配置，返回，什么都不做
 
-  // cater for pre-defined getter/setters
+  // cater for pre-defined getter/setters  
   var getter = property && property.get
   var setter = property && property.set
 
-  var childOb = observe(val)
+  var childOb = observe(val)  //  返回Obsercer实例 ，当然也有可能是 undefined
   Object.defineProperty(obj, key, {
     enumerable: true,
     configurable: true,
+    
+    //  重新定义getter和setter
+    
     get: function reactiveGetter () {
       var value = getter ? getter.call(obj) : val
       if (Dep.target) {
         dep.depend()
         if (childOb) {
-          childOb.dep.depend()
+          childOb.dep.depend()  
         }
         if (Array.isArray(value)) {
           for (var e, i = 0, l = value.length; i < l; i++) {
