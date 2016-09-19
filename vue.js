@@ -325,7 +325,7 @@ var config = {
 /**
  * Check if a string starts with $ or _
  */
-function isReserved (str) {
+function isReserved (str) {   // 属性名是否以 $ 或 _开头
   var c = (str + '').charCodeAt(0)  // charCodeAt
   return c === 0x24 || c === 0x5F  
 }
@@ -528,10 +528,10 @@ if ("development" !== 'production') {
 
 /*  */
 
-
+// ****************************************************************************************************************
 var uid$2 = 0  // 什么用？
 
-// ****************************************************************************************************************
+
 /**
  * A dep is an observable that can have multiple
  * directives subscribing to it.
@@ -539,7 +539,7 @@ var uid$2 = 0  // 什么用？
 // 每个Dep实例的id都不同？
 var Dep = function Dep () {
   this.id = uid$2++ 
-  this.subs = []  //  都有一个数组储存 subs ？
+  this.subs = []  //  都有一个数组储存 subs ,subs数组里的元素是 watcher实例。
 };
 
 Dep.prototype.addSub = function addSub (sub) {
@@ -552,15 +552,15 @@ Dep.prototype.removeSub = function removeSub (sub) {
 
 Dep.prototype.depend = function depend () { // dep.target?
   if (Dep.target) {
-    Dep.target.addDep(this) // 
+    Dep.target.addDep(this) // Dep.target有一个addDep方法，添加该实例,Dep.target 指向的是一个watcher实例
   }
 };
 
 Dep.prototype.notify = function notify () {
   // stablize the subscriber list first
-  var subs = this.subs.slice()
+  var subs = this.subs.slice() 
   for (var i = 0, l = subs.length; i < l; i++) {
-    subs[i].update()  // subs 的每一个元素都有一个 update方法？
+    subs[i].update()  // subs 的每一个元素watcher，都有一个 update方法，每一个watcher实例执行update方法
   }
 };
 
@@ -569,7 +569,7 @@ Dep.prototype.notify = function notify () {
 // watcher being evaluated at any time.
 
 Dep.target = null // 一个watcher实例
-var targetStack = []
+var targetStack = []  // 储存watcher
 
 function pushTarget (_target) {
   if (Dep.target) targetStack.push(Dep.target)  // 如果有新的值，就把当前值推入一个targetStack，并把参数赋值给Dep.target
@@ -577,23 +577,24 @@ function pushTarget (_target) {
 }
 
 function popTarget () {
-  Dep.target = targetStack.pop() // 没有新值时，出栈
+  Dep.target = targetStack.pop() // 出栈
 }
 
 // ****************************************************************************************************************
 
 /*  */
 
+//  scheduler 的初始状态
 
-var queue = []  // 数组元素是watcher,watcher ?
-var has = {}
+var queue = []  // 储存watcher,
+var has = {}    // 作用？
 var circular = {}
 var waiting = false
 var flushing = false
 var index = 0  // 只是数组的索引
 
 /**
- * Reset the scheduler's state.
+ * Reset the scheduler's state.  重置调度程序的状态
  */
 
 // 重置调度程序状态
@@ -621,16 +622,19 @@ function flushSchedulerQueue () {
   //    user watchers are created before the render watcher)
   // 3. If a component is destroyed during a parent component's watcher run,
   //    its watchers can be skipped.
-  queue.sort(function (a, b) { return a.id - b.id; }) // queue 是一个数组，dep实例有id 属性
+  queue.sort(function (a, b) { return a.id - b.id; }) // queue 是一个数组，watcher实例有id属性
+  // 按id从大到小排序，也就是后创建的在前，先创建的在后
 
   // do not cache length because more watchers might be pushed
   // as we run existing watchers
   for (index = 0; index < queue.length; index++) {
     var watcher = queue[index]  //  queue的数组元素是watcher
-    var id = watcher.id
-    has[id] = null
-    watcher.run()
+    var id = watcher.id    // 读取watch的id 属性
+    has[id] = null  // ?
+    watcher.run()   //  执行实例的run方法 ？
+
     // in dev build, check and stop circular updates.
+    // ？？？？？？？
     if ("development" !== 'production' && has[id] != null) {
       circular[id] = (circular[id] || 0) + 1
       if (circular[id] > config._maxUpdateCount /* 100 */) {
@@ -653,7 +657,7 @@ function flushSchedulerQueue () {
     devtools.emit('flush')
   }
 
-  resetSchedulerState()
+  resetSchedulerState()  //  flush完后，重置状态
 }
 
 /**
@@ -694,34 +698,36 @@ var uid$1 = 0
  * This is used for both the $watch() api and directives.
  */
 var Watcher = function Watcher (
-  vm,
-  expOrFn,
-  cb,
-  options
+  vm,  // 监视一个vm 实例
+  expOrFn, // 函数或者一个表达式
+  cb, //  一个回调函数
+  options // 其他选项
 ) {
-  if ( options === void 0 ) options = {}; // 为什么用void 0
+  if ( options === void 0 ) options = {}; // 为什么用void 0 ？ options 默认值是一个空对象
 
-  this.vm = vm
-  vm._watchers.push(this)
+  this.vm = vm 
+  vm._watchers.push(this)  // vm的__watchers 是一个数组，储存watch这个vm的watcher实例
   // options
-  this.deep = !!options.deep  // 参数特性
-  this.user = !!options.user
-  this.lazy = !!options.lazy
-  this.sync = !!options.sync
-  this.expression = expOrFn.toString()  // 函数会返回一个函数表达式
+  this.deep = !!options.deep  // ？
+  this.user = !!options.user  // ?
+  this.lazy = !!options.lazy  // ? 懒加载
+  this.sync = !!options.sync  // ? 异步
+  this.expression = expOrFn.toString()  // 如果是函数会返回一个函数表达式
   this.cb = cb   
-  this.id = ++uid$1 // uid for batching,
-  this.active = true
+  this.id = ++uid$1 // uid for batching,  给每个watcher也设置一个id
+  this.active = true 
   this.dirty = this.lazy // for lazy watchers
+  
   this.deps = []  //  watcher 包含dep ？
   this.newDeps = []  // ?
   this.depIds = new _Set() // ?
   this.newDepIds = new _Set() // ?
+  
   // parse expression for getter
   if (typeof expOrFn === 'function') {
-    this.getter = expOrFn
+    this.getter = expOrFn   //  如果传入的是一个函数，函数直接赋值给getter
   } else {
-    this.getter = parsePath(expOrFn) // parsePath
+    this.getter = parsePath(expOrFn) // parsePath 
     if (!this.getter) {
       this.getter = function () {}
       "development" !== 'production' && warn(
@@ -732,37 +738,37 @@ var Watcher = function Watcher (
       )
     }
   }
-  this.value = this.lazy
+  this.value = this.lazy  //  watcher实例的value
     ? undefined
-    : this.get()
+    : this.get() // 
 };
 
 /**
  * Evaluate the getter, and re-collect dependencies.
  */
 Watcher.prototype.get = function get () {
-  pushTarget(this)
-  var value = this.getter.call(this.vm, this.vm)
+  pushTarget(this)  // 将之前的Dep.target 指向的watcher 推入栈中，并设置Dep.target为此 watcher实例
+  var value = this.getter.call(this.vm, this.vm)  // this.vm作为参数传入getter函数
   // "touch" every property so they are all tracked as
   // dependencies for deep watching
-  if (this.deep) {
+  if (this.deep) { // ?
     traverse(value)  // 穿过
   }
-  popTarget()
+  popTarget() // ?
   this.cleanupDeps()
   return value
 };
 
 /**
- * Add a dependency to this directive.
+ * Add a dependency to this directive.   为这个指令添加 依赖
  */
 Watcher.prototype.addDep = function addDep (dep) {
-  var id = dep.id
+  var id = dep.id  
   if (!this.newDepIds.has(id)) {
     this.newDepIds.add(id)
     this.newDeps.push(dep)
     if (!this.depIds.has(id)) {
-      dep.addSub(this)
+      dep.addSub(this)   //  dep添加watcher?
     }
   }
 };
@@ -1060,7 +1066,7 @@ function copyAugment (target, src, keys) {
 }
 
 /**
- * Attempt to create an observer instance for a value,
+ * Attempt to create an observer instance for a value,  将一个data数据对象转化成一个observer
  * returns the new observer if successfully observed,  返回一个新的observer
  * or the existing observer if the value already has one.  
  */
@@ -1078,7 +1084,7 @@ function observe (value) {
     Object.isExtensible(value) && // value必须是可拓展的（可以向对象添加属性）
     !value._isVue // ??
   ) {
-    ob = new Observer(value)
+    ob = new Observer(value)  // 生成一个vm的data所对应的observer,value上会增加一个__ob__属性，指向observer实例
   }
   return ob //  如果value.__ob__已经指向了一个Observer实例，那么返回这个实例，如果没有指向一个实例，先检查上面条件是否全部满足，如果满足，
             // 创建value的observer实例，反则返回 undefined
@@ -1152,9 +1158,9 @@ function defineReactive (
  * already exist.
  */
 function set (obj, key, val) {
-  if (Array.isArray(obj)) {
+  if (Array.isArray(obj)) {   // 如果obj是一个数组，key应该是一个整数索引
     obj.splice(key, 1, val)
-    return val
+    return val  // 返回val
   }
   if (hasOwn(obj, key)) {
     obj[key] = val
@@ -1198,9 +1204,9 @@ function del (obj, key) {
   }
   ob.dep.notify()
 }
-
+// ***************************************************************************************************************************
 /*  */
-
+// 设置vm的初始状态
 function initState (vm) {
   vm._watchers = []
   initProps(vm)
@@ -1211,18 +1217,20 @@ function initState (vm) {
 }
 
 function initProps (vm) {
-  var props = vm.$options.props
-  var propsData = vm.$options.propsData
+  var props = vm.$options.props   // 第一次出现props
+  var propsData = vm.$options.propsData   // 第一次出现propsData
   if (props) {
-    var keys = vm.$options._propKeys = Object.keys(props)
-    var isRoot = !vm.$parent
-    // root instance props should be converted
+    var keys = vm.$options._propKeys = Object.keys(props) // vm.$options新增了一个属性，为一个数组，保存props的所有属性名
+    var isRoot = !vm.$parent   // 如果vm有父组件，当然它就不是根组件
+
+    // root instance props should be converted  ？？？？？
     observerState.shouldConvert = isRoot
     var loop = function ( i ) {
       var key = keys[i]
-      /* istanbul ignore else */
+      /* istanbul ignore else */  // ？
       if ("development" !== 'production') {
-        defineReactive(vm, key, validateProp(key, props, propsData, vm), function () {
+        defineReactive(vm, key, validateProp(key, props, propsData, vm), function () {  // 对象  属性 值 setter
+          //  key是props对象的key，validateProp返回一个value
           if (vm.$parent && !observerState.isSettingProps) {
             warn(
               "Avoid mutating a prop directly since the value will be " +
@@ -1243,50 +1251,54 @@ function initProps (vm) {
 
 function initData (vm) {
   var data = vm.$options.data
-  data = vm._data = typeof data === 'function'
-    ? data.call(vm)
-    : data || {}
-  if (!isPlainObject(data)) {
+  data = vm._data = typeof data === 'function'  // 如果data是个函数形式,这里给vm新添加一个属性_data
+    ? data.call(vm)   // 执行data这个函数，返回一个对象
+    : data || {}  // 如果不是函数，data为vm.$options.data,如果不存在，默认设置为一个空对象{}
+  if (!isPlainObject(data)) {  // 如果data不是一个对象，那就是函数没有返回正确的值
     data = {}
     "development" !== 'production' && warn(
       'data functions should return an object.',
       vm
     )
   }
+  // 得到data对象后，开始对它处理
   // proxy data on instance
-  var keys = Object.keys(data)
-  var props = vm.$options.props
-  var i = keys.length
+  var keys = Object.keys(data)  // 获得data的所有属性，
+  var props = vm.$options.props  // 获得vm的props
+  var i = keys.length 
   while (i--) {
-    if (props && hasOwn(props, keys[i])) {
+    if (props && hasOwn(props, keys[i])) {  // 如果data中的属性在props中也存在，报错。
       "development" !== 'production' && warn(
         "The data property \"" + (keys[i]) + "\" is already declared as a prop. " +
         "Use prop default value instead.",
         vm
       )
     } else {
-      proxy(vm, keys[i])
+      proxy(vm, keys[i])  
+      // 否则，如果没报错，用proxy方法处理data,结果就是data里的属性都成了vm的属性，并且get和set都直接在vm._data上操作
     }
   }
   // observe data
   observe(data)
-  data.__ob__ && data.__ob__.vmCount++
+  data.__ob__ && data.__ob__.vmCount++ // 如果data.__ob__存在，则进行&&后面的运算，如果不存在，则不进行运算
 }
 
 var computedSharedDefinition = {
   enumerable: true,
   configurable: true,
-  get: noop,
+  get: noop,  // noop是什么都不做的函数
   set: noop
 }
 
 function initComputed (vm) {
-  var computed = vm.$options.computed
-  if (computed) {
+  var computed = vm.$options.computed  //  得到computed对象
+  if (computed) {  // 如果存在
     for (var key in computed) {
-      var userDef = computed[key]
-      if (typeof userDef === 'function') {
-        computedSharedDefinition.get = makeComputedGetter(userDef, vm)
+      var userDef = computed[key]  // computed对象的属性值
+      // usrtDef可以是对象，也可以是个函数，如果是个对象，对象中有 get 和 set 函数
+      
+      if (typeof userDef === 'function') { // 如果是函数
+        computedSharedDefinition.get = makeComputedGetter(userDef, vm)   //??????
         computedSharedDefinition.set = noop
       } else {
         computedSharedDefinition.get = userDef.get
@@ -1305,8 +1317,9 @@ function initComputed (vm) {
 
 function makeComputedGetter (getter, owner) {
   var watcher = new Watcher(owner, getter, noop, {
-    lazy: true
-  })
+    lazy: true  //  默认是true
+  }) 
+
   return function computedGetter () {
     if (watcher.dirty) {
       watcher.evaluate()
@@ -1319,11 +1332,11 @@ function makeComputedGetter (getter, owner) {
 }
 
 function initMethods (vm) {
-  var methods = vm.$options.methods
-  if (methods) {
-    for (var key in methods) {
-      if (methods[key] != null) {
-        vm[key] = bind(methods[key], vm)
+  var methods = vm.$options.methods  // 获得 methods对象
+  if (methods) { // 如果存在
+    for (var key in methods) {  // 遍历
+      if (methods[key] != null) {  // 
+        vm[key] = bind(methods[key], vm)  // methods的属性变成vm实例的属性
       } else if ("development" !== 'production') {
         warn(("Method \"" + key + "\" is undefined in options."), vm)
       }
@@ -1332,16 +1345,21 @@ function initMethods (vm) {
 }
 
 function initWatch (vm) {
-  var watch = vm.$options.watch
+  var watch = vm.$options.watch  // 监视对象 一个对象，键是观察表达式，值是对应回调。
+  // 值也可以是方法名，或者是对象，包含选项。在实例化时为每个键调用 $watch() 。
+  // 如果是字符串，那就是方法名
+  // 如果是对象，对象包括handler属性和deep属性
+  
   if (watch) {
     for (var key in watch) {
-      var handler = watch[key]
-      if (Array.isArray(handler)) {
+      var handler = watch[key]  //  这里handler可能是对象，字符串，
+      if (Array.isArray(handler)) {  // 如果是数组 
         for (var i = 0; i < handler.length; i++) {
-          createWatcher(vm, key, handler[i])
+          createWatcher(vm, key, handler[i])  // 分别对应实例，属性名，处理函数
+          // 如果是数组，那么数组里的每一个元素都是一个handler。为每一个元素都创建一个watcher
         }
       } else {
-        createWatcher(vm, key, handler)
+        createWatcher(vm, key, handler)  
       }
     }
   }
@@ -1349,14 +1367,14 @@ function initWatch (vm) {
 
 function createWatcher (vm, key, handler) {
   var options
-  if (isPlainObject(handler)) {
-    options = handler
-    handler = handler.handler
+  if (isPlainObject(handler)) {  // 如果handler是对象
+    options = handler  
+    handler = handler.handler  //  那么handler对象里必须要有handler属性
   }
-  if (typeof handler === 'string') {
-    handler = vm[handler]
+  if (typeof handler === 'string') {  // 此时值是方法名
+    handler = vm[handler]  // 必须是在methods里定义的方法
   }
-  vm.$watch(key, handler, options)
+  vm.$watch(key, handler, options)  //  vm.$watch ? 
 }
 
 function stateMixin (Vue) {
@@ -1376,19 +1394,19 @@ function stateMixin (Vue) {
       )
     }
   }
-  Object.defineProperty(Vue.prototype, '$data', dataDef)
+  Object.defineProperty(Vue.prototype, '$data', dataDef)  // ******
 
   Vue.prototype.$set = set
   Vue.prototype.$delete = del
 
   Vue.prototype.$watch = function (
-    expOrFn,
-    cb,
-    options
+    expOrFn,  //  key
+    cb,  // handler
+    options  //  options
   ) {
-    var vm = this
+    var vm = this  
     options = options || {}
-    options.user = true
+    options.user = true  //  ? 
     var watcher = new Watcher(vm, expOrFn, cb, options)
     if (options.immediate) {
       cb.call(vm, watcher.value)
@@ -1400,15 +1418,15 @@ function stateMixin (Vue) {
 }
 
 function proxy (vm, key) {
-  if (!isReserved(key)) {
-    Object.defineProperty(vm, key, {
+  if (!isReserved(key)) {  //  key不是以 $或者_开头
+    Object.defineProperty(vm, key, {  // 把data的属性抽离出来，直接成为vm的顶级属性 
       configurable: true,
       enumerable: true,
       get: function proxyGetter () {
-        return vm._data[key]
+        return vm._data[key]  // 从vm._data中取值
       },
       set: function proxySetter (val) {
-        vm._data[key] = val
+        vm._data[key] = val  // 在vm._data中设置值
       }
     })
   }
