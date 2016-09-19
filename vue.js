@@ -1,7 +1,7 @@
 /*!
  * Vue.js v2.0.0-rc.6
  * (c) 2014-2016 Evan You
- * Released under the MIT License.
+ * Released under the MIT License.  
  */
 (function (global, factory) {
   typeof exports === 'object' && typeof module !== 'undefined' ? module.exports = factory() :
@@ -58,7 +58,7 @@ function makeMap (
 /**
  * Check if a tag is a built-in tag.
  */
-var isBuiltInTag = makeMap('slot,component', true)
+var isBuiltInTag = makeMap('slot,component', true) // 可以使用内建的标签，<slot> , <component>
 
 /**
  * Remove an item from an array
@@ -91,7 +91,7 @@ function isPrimitive (value) {
  * Create a cached version of a pure function.
  */
 
-// 为每一个函数创建一个 结果缓存 函数
+// 为每一个函数创建一个缓存运算值的函数，返回的函数都有一个对应的cache对象，保存之前运算过的值
 function cached (fn) {
   var cache = Object.create(null)
   return function cachedFn (str) {
@@ -101,7 +101,7 @@ function cached (fn) {
 }
 
 /**
- * Camelize a hyphen-delmited string.
+ * Camelize a hyphen-delmited string.   //  连字符格式 转换为 驼峰式
  */
 var camelizeRE = /-(\w)/g
 var camelize = cached(function (str) {
@@ -110,14 +110,14 @@ var camelize = cached(function (str) {
 })
 
 /**
- * Capitalize a string.
+ * Capitalize a string.  // 首字母大写
  */
 var capitalize = cached(function (str) {
   return str.charAt(0).toUpperCase() + str.slice(1)
 })
 
 /**
- * Hyphenate a camelCase string.
+ * Hyphenate a camelCase string.  将驼峰式转换为连字符格式
  */
 var hyphenateRE = /([^-])([A-Z])/g
 var hyphenate = cached(function (str) {
@@ -127,10 +127,10 @@ var hyphenate = cached(function (str) {
     .toLowerCase()
 }) 
 
-// 为什么要两次？
+
 
 /**
- * Simple bind, faster than native
+ * Simple bind, faster than native  //  重写原生的bind函数
  */
 function bind (fn, ctx) {
   function boundFn (a) {
@@ -146,10 +146,9 @@ function bind (fn, ctx) {
   return boundFn
 }
 
-//  why fast
 
 /**
- * Convert an Array-like object to a real Array.
+ * Convert an Array-like object to a real Array. // 将类数组对象转化为真正的对象
  */
 function toArray (list, start) {
   start = start || 0
@@ -168,7 +167,7 @@ function extend (to, _from) {
   for (var key in _from) {
     to[key] = _from[key]
   }
-  return to
+  return to  // 混合对象 
 }
 
 /**
@@ -177,7 +176,7 @@ function extend (to, _from) {
  * is a JSON-compliant type.
  */
 function isObject (obj) {
-  return obj !== null && typeof obj === 'object'  
+  return obj !== null && typeof obj === 'object'  // obj 可以是对象，数组  注意 typeof function() {}  === 'function'
 }
 
 // typeof null === 'object' ，so first obj !== null
@@ -194,7 +193,7 @@ function isPlainObject (obj) {
 
 
 /**
- * Merge an Array of Objects into a single Object.
+ * Merge an Array of Objects into a single Object.  // 将一个数组里的所有对象合并成一个对象
  */
 function toObject (arr) {
   var res = {}
@@ -204,17 +203,17 @@ function toObject (arr) {
     }
   }
   return res
-}  // 如果一个数组的所有元素都是对象，将它们合并在一个对象里，并返回这个对象
+}  
 
 /**
  * Perform no operation.
  */
-function noop () {}  // ?
+function noop () {}  // 一个什么都不做的函数
 
 /**
  * Always return false.
  */
-var no = function () { return false; } // ?
+var no = function () { return false; } //   一个始终返回 false 的函数
 
 /**
  * Generate a static keys string from compiler modules.
@@ -223,69 +222,69 @@ function genStaticKeys (modules) {
   return modules.reduce(function (keys, m) {
     return keys.concat(m.staticKeys || [])
   }, []).join(',')
-}  //  reduce ?
+}  //  ？？？？
 
 /*  */
 
 
-// Vue.config and other 
+// Vue.config and other   Vue.config的选项
 
 var config = {
   /**
    * Option merge strategies (used in core/util/options)
    */
-  optionMergeStrategies: Object.create(null),
+  optionMergeStrategies: Object.create(null),  //  合并策略，主要用于mixin时的冲突并
 
   /**
    * Whether to suppress warnings.
    */
-  silent: false,
+  silent: false,  // 默认提示错误信息
 
   /**
    * Whether to enable devtools
    */
-  devtools: "development" !== 'production',
+  devtools: "development" !== 'production',  // ?
 
   /**
    * Error handler for watcher errors
    */
-  errorHandler: null,
+  errorHandler: null,  // 提供给watcher的错误处理函数
 
   /**
    * Ignore certain custom elements
    */
-  ignoredElements: null,
+  ignoredElements: null,  // ?
 
   /**
    * Custom user key aliases for v-on
    */
-  keyCodes: Object.create(null),
+  keyCodes: Object.create(null),  //  键码快捷键
 
   /**
    * Check if a tag is reserved so that it cannot be registered as a
    * component. This is platform-dependent and may be overwritten.
    */
-  isReservedTag: no,
+  isReservedTag: no,  // 是否是 Reserved 标签
 
   /**
    * Check if a tag is an unknown element.
    * Platform-dependent.
    */
-  isUnknownElement: no,
+  isUnknownElement: no, // 是否是未知函数
 
   /**
    * Get the namespace of an element
    */
-  getTagNamespace: noop,
+  getTagNamespace: noop,  // 元素的命名空间
 
   /**
    * Check if an attribute must be bound using property, e.g. value
    * Platform-dependent.
    */
-  mustUseProp: no,
+  mustUseProp: no,  // 某个属性是否
 
   /**
-   * List of asset types that a component can own.
+   * List of asset types that a component can own.  ?
    */
   _assetTypes: [
     'component',
@@ -294,7 +293,7 @@ var config = {
   ],
 
   /**
-   * List of lifecycle hooks.
+   * List of lifecycle hooks.  生命周期钩子函数
    */
   _lifecycleHooks: [
     'beforeCreate', // 替换了 init
@@ -312,12 +311,12 @@ var config = {
   /**
    * Max circular updates allowed in a scheduler flush cycle.
    */
-  _maxUpdateCount: 100,
+  _maxUpdateCount: 100,  // 最大scheduler数量
 
   /**
    * Server rendering?
    */
-  _isServer: "client" === 'server'
+  _isServer: "client" === 'server' // 是否服务端渲染
 }
 
 /*  */
@@ -340,12 +339,12 @@ function def (obj, key, val, enumerable) {
     writable: true,
     configurable: true
   })
-} // 配置某个对象的某个属性，可配置的是value 和 enumerable 
+} // 配置某个对象的某个属性，可配置的是value 和 enumerable(默认是false 不可枚举) 
 
 /**
- * Parse simple path.
+ * Parse simple path.  解析一个路径
  */
-var bailRE = /[^\w\.\$]/  //  ? 正则表达式
+var bailRE = /[^\w\.\$]/  //  ? 正则表达式 ？
 function parsePath (path) {
   if (bailRE.test(path)) {
     return
@@ -1377,7 +1376,7 @@ function createWatcher (vm, key, handler) {
   vm.$watch(key, handler, options)  //  vm.$watch ? 
 }
 
-function stateMixin (Vue) {
+function stateMixin (Vue) {  //  ??????????????????????? 
   // flow somehow has problems with directly declared definition object
   // when using Object.defineProperty, so we have to procedurally build up
   // the object here.
@@ -1402,14 +1401,14 @@ function stateMixin (Vue) {
   Vue.prototype.$watch = function (
     expOrFn,  //  key
     cb,  // handler
-    options  //  options
+    options  //  options (有 deep和immediate 两个属性)
   ) {
     var vm = this  
     options = options || {}
     options.user = true  //  ? 
     var watcher = new Watcher(vm, expOrFn, cb, options)
-    if (options.immediate) {
-      cb.call(vm, watcher.value)
+    if (options.immediate) {  //  options的immediate属性
+      cb.call(vm, watcher.value)  // 原handler
     }
     return function unwatchFn () {
       watcher.teardown()
@@ -1440,7 +1439,7 @@ var VNode = function VNode (
   children,
   text,
   elm,
-  ns,
+  ns,  //  ns是什么
   context,
   componentOptions
 ) {
@@ -1451,10 +1450,11 @@ var VNode = function VNode (
   this.elm = elm
   this.ns = ns
   this.context = context
-  this.key = data && data.key
+  this.key = data && data.key // data是一个对象，对象有一个key属性？
   this.componentOptions = componentOptions
   this.child = undefined
-  this.parent = undefined
+  this.parent = undefined 
+
   this.raw = false
   this.isStatic = false
   this.isRootInsert = true
@@ -1463,7 +1463,7 @@ var VNode = function VNode (
   // apply construct hook.
   // this is applied during render, before patch happens.
   // unlike other hooks, this is applied on both client and server.
-  var constructHook = data && data.hook && data.hook.construct
+  var constructHook = data && data.hook && data.hook.construct  // data还有一个hook属性，hook还有一个construct属性？
   if (constructHook) {
     constructHook(this)
   }
@@ -1474,13 +1474,13 @@ var emptyVNode = function () {
   node.text = ''
   node.isComment = true
   return node
-}
+} 
 
-// optimized shallow clone
+// optimized shallow clone  优化浅复制
 // used for static nodes and slot nodes because they may be reused across
 // multiple renders, cloning them avoids errors when DOM manipulations rely
-// on their elm reference.
-function cloneVNode (vnode) {
+// on their elm reference.  //  elm reference ? 
+function cloneVNode (vnode) { // 传入要复制的vnode结点
   var cloned = new VNode(
     vnode.tag,
     vnode.data,
@@ -1493,35 +1493,35 @@ function cloneVNode (vnode) {
   )
   cloned.isStatic = vnode.isStatic
   cloned.key = vnode.key
-  cloned.isCloned = true
+  cloned.isCloned = true  //  标志 这是一个复制的结点
   return cloned
 }
 
-function cloneVNodes (vnodes) {
+function cloneVNodes (vnodes) {  //  批量复制
   var res = new Array(vnodes.length)
   for (var i = 0; i < vnodes.length; i++) {
     res[i] = cloneVNode(vnodes[i])
   }
-  return res
+  return res  // 返回一个结点数组
 }
 
 /*  */
 
-function normalizeChildren (
+function normalizeChildren (  //   ？？？？
   children,
   ns,
-  nestedIndex
+  nestedIndex  //  嵌套层次
 ) {
-  if (isPrimitive(children)) {
+  if (isPrimitive(children)) {  //  如果是一个原始值
     return [createTextVNode(children)]
   }
-  if (Array.isArray(children)) {
+  if (Array.isArray(children)) {  // 如果是一个数组
     var res = []
     for (var i = 0, l = children.length; i < l; i++) {
       var c = children[i]
-      var last = res[res.length - 1]
+      var last = res[res.length - 1]  //  最后一个元素
       //  nested
-      if (Array.isArray(c)) {
+      if (Array.isArray(c)) {  // 如果还是一个数组
         res.push.apply(res, normalizeChildren(c, ns, i))
       } else if (isPrimitive(c)) {
         if (last && last.text) {
@@ -1550,11 +1550,11 @@ function normalizeChildren (
   }
 }
 
-function createTextVNode (val) {
+function createTextVNode (val) {  //  产生一个文本结点
   return new VNode(undefined, undefined, undefined, String(val))
 }
 
-function applyNS (vnode, ns) {
+function applyNS (vnode, ns) {  // 对该组件和该组件的所有子组件都设置ns,当然如果之前存在ns 就不用设置了，直接返回
   if (vnode.tag && !vnode.ns) {
     vnode.ns = ns
     if (vnode.children) {
@@ -1565,51 +1565,61 @@ function applyNS (vnode, ns) {
   }
 }
 
-function getFirstComponentChild (children) {
+function getFirstComponentChild (children) {  // 第一个组件类型的子元素，是不是组件类型，是检查是否有compoOptions选项
   return children && children.filter(function (c) { return c && c.componentOptions; })[0]
 }
-
-function mergeVNodeHook (def, key, hook) {
-  var oldHook = def[key]
-  if (oldHook) {
-    var injectedHash = def.__injected || (def.__injected = {})
-    if (!injectedHash[key]) {
-      injectedHash[key] = true
-      def[key] = function () {
+/**
+ * def = {
+ *   key: ... ,
+ *   __injected: {
+ *       key: Boolean
+ *     }
+ * }
+ */
+function mergeVNodeHook (def, key, hook) {  
+  var oldHook = def[key]  //  def? 
+  if (oldHook) {  //  如果之前存在
+    var injectedHash = def.__injected || (def.__injected = {})  //  def是否有__injected属性，如果没有，默认为一个空对象
+    if (!injectedHash[key]) {  // 如果之前没有inject过，那么injectedHash[key] 应该为false
+      injectedHash[key] = true  // 把它设为true，表示已经injected
+      def[key] = function () {  // 设置def[key]为一个函数，函数执行后，旧钩子先执行一遍，新钩子再执行一遍
         oldHook.apply(this, arguments)
         hook.apply(this, arguments)
       }
     }
   } else {
-    def[key] = hook
+    def[key] = hook  // 如果之前不存在，直接赋值
   }
 }
 
-function updateListeners (
-  on,
-  oldOn,
-  add,
+function updateListeners (  // 更新listeners
+  on,  //  对象
+  oldOn, // 同样一个对象
+  add,  // function 一个函数
   remove
 ) {
+  /**
+   * 
+   */
   var name, cur, old, fn, event, capture
   for (name in on) {
     cur = on[name]
     old = oldOn[name]
-    if (!cur) {
+    if (!cur) {  //  如果属性值为undefined，报错
       "development" !== 'production' && warn(
         ("Handler for event \"" + name + "\" is undefined.")
       )
-    } else if (!old) {
-      capture = name.charAt(0) === '!'
-      event = capture ? name.slice(1) : name
-      if (Array.isArray(cur)) {
-        add(event, (cur.invoker = arrInvoker(cur)), capture)
-      } else {
-        if (!cur.invoker) {
-          fn = cur
+    } else if (!old) {  //  
+      capture = name.charAt(0) === '!' // Boolean
+      event = capture ? name.slice(1) : name  // 如果name 不是以!开头，name直接赋值给event，否则，去掉!后再赋值给event
+      if (Array.isArray(cur)) {  // cur 可以是数组，数组元素是函数
+        add(event, (cur.invoker = arrInvoker(cur)), capture)  //  add？
+      } else {  // old 存在
+        if (!cur.invoker) {  // 如果 cur.invoker不存在
+          fn = cur  
           cur = on[name] = {}
           cur.fn = fn
-          cur.invoker = fnInvoker(cur)
+          cur.invoker = fnInvoker(cur)  
         }
         add(event, cur.invoker, capture)
       }
@@ -1625,25 +1635,25 @@ function updateListeners (
     }
   }
   for (name in oldOn) {
-    if (!on[name]) {
+    if (!on[name]) {  // 如果oldOn中存在的属性on中没有，
       event = name.charAt(0) === '!' ? name.slice(1) : name
-      remove(event, oldOn[name].invoker)
+      remove(event, oldOn[name].invoker) // 移除event数组中的 oldOn[name].invoker
     }
   }
 }
 
-function arrInvoker (arr) {
+function arrInvoker (arr) {  // 返回一个函数，
   return function (ev) {
     var arguments$1 = arguments;
 
-    var single = arguments.length === 1
+    var single = arguments.length === 1 //  是否只传入一个参数 Boolean
     for (var i = 0; i < arr.length; i++) {
-      single ? arr[i](ev) : arr[i].apply(null, arguments$1)
+      single ? arr[i](ev) : arr[i].apply(null, arguments$1) // arr是一个函数数组，如果只传入一个参数，直接执行，否则，使用apply方法。
     }
   }
 }
 
-function fnInvoker (o) {
+function fnInvoker (o) { // 传入一个对象，这个对象有fn属性，为一个函数
   return function (ev) {
     var single = arguments.length === 1
     single ? o.fn(ev) : o.fn.apply(null, arguments)
@@ -1654,20 +1664,20 @@ function fnInvoker (o) {
 
 var activeInstance = null
 
-function initLifecycle (vm) {
+function initLifecycle (vm) {  // 生命周期初始化
   var options = vm.$options
 
   // locate first non-abstract parent
   var parent = options.parent
-  if (parent && !options.abstract) {
+  if (parent && !options.abstract) {  // abstract ?  parent存在，且abstract不存在
     while (parent.$options.abstract && parent.$parent) {
       parent = parent.$parent
-    }
+    } // parent 直到碰到 parent.$options.abstract 为 false,或者 已经到了根实例
     parent.$children.push(vm)
-  }
+  } 
 
   vm.$parent = parent
-  vm.$root = parent ? parent.$root : vm
+  vm.$root = parent ? parent.$root : vm  // 如果paren存在就是parent.$root 否则等于自身
 
   vm.$children = []
   vm.$refs = {}
@@ -1679,18 +1689,19 @@ function initLifecycle (vm) {
   vm._isBeingDestroyed = false
 }
 
-function lifecycleMixin (Vue) {
+function lifecycleMixin (Vue) {  // 传入Vue构造函数
+
   Vue.prototype._mount = function (
-    el,
-    hydrating
+    el, // 要挂载的元素
+    hydrating  // 混合？
   ) {
-    var vm = this
+    var vm = this  // 指向一个Vue实例
     vm.$el = el
-    if (!vm.$options.render) {
-      vm.$options.render = emptyVNode
+    if (!vm.$options.render) {  //  render?  如果不存在，必须要有render函数？
+      vm.$options.render = emptyVNode // function ,创建一个空结点
       if ("development" !== 'production') {
         /* istanbul ignore if */
-        if (vm.$options.template) {
+        if (vm.$options.template) {  // 如果 temlate属性也不存在
           warn(
             'You are using the runtime-only build of Vue where the template ' +
             'option is not available. Either pre-compile the templates into ' +
@@ -1705,34 +1716,35 @@ function lifecycleMixin (Vue) {
         }
       }
     }
-    callHook(vm, 'beforeMount')
+    callHook(vm, 'beforeMount')  // 执行beforeMount钩子函数
     vm._watcher = new Watcher(vm, function () {
       vm._update(vm._render(), hydrating)
-    }, noop)
+    }, noop) //  初始化 vm._watcher
+
     hydrating = false
     // root instance, call mounted on self
     // mounted is called for child components in its inserted hook
-    if (vm.$root === vm) {
+    if (vm.$root === vm) {  //  如果自己就是跟实例，执行mounted钩子函数，将vm._isMounted变为true
       vm._isMounted = true
       callHook(vm, 'mounted')
     }
-    return vm
+    return vm  // 返回vm实例
   }
 
   Vue.prototype._update = function (vnode, hydrating) {
     var vm = this
     if (vm._isMounted) {
-      callHook(vm, 'beforeUpdate')
+      callHook(vm, 'beforeUpdate')  // 如果已经mounted 执行beforeUpaated钩子函数
     }
-    var prevEl = vm.$el
-    var prevActiveInstance = activeInstance
-    activeInstance = vm
-    var prevVnode = vm._vnode
-    vm._vnode = vnode
+    var prevEl = vm.$el  //  缓存当前的el
+    var prevActiveInstance = activeInstance // 缓存 activeInstance
+    activeInstance = vm 
+    var prevVnode = vm._vnode  // vm._vnode ?
+    vm._vnode = vnode // vm._vnode 等于传入的vnode
     if (!prevVnode) {
       // Vue.prototype.__patch__ is injected in entry points
       // based on the rendering backend used.
-      vm.$el = vm.__patch__(vm.$el, vnode, hydrating)
+      vm.$el = vm.__patch__(vm.$el, vnode, hydrating)  // vm.__patch__ ?
     } else {
       vm.$el = vm.__patch__(prevVnode, vnode)
     }
@@ -1792,7 +1804,7 @@ function lifecycleMixin (Vue) {
     }
   }
 
-  Vue.prototype.$forceUpdate = function () {
+  Vue.prototype.$forceUpdate = function () {  //  强制更新
     var vm = this
     if (vm._watcher) {
       vm._watcher.update()
