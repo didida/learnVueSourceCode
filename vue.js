@@ -461,14 +461,14 @@ if (typeof Set !== 'undefined' && /native code/.test(Set.toString())) {
   _Set = Set
 } else {
   // a non-standard Set polyfill that only works with primitive keys.
-  _Set = (function () {
+  _Set = (function () {  // set的数据结构此时是个对象，此时和ES6的Set不同
     function Set () {
       this.set = Object.create(null)
     }
     Set.prototype.has = function has (key) {
       return this.set[key] !== undefined
     };
-    Set.prototype.add = function add (key) {
+    Set.prototype.add = function add (key) {  // 只是增加一个键，值设为1
       this.set[key] = 1
     };
     Set.prototype.clear = function clear () {
@@ -535,9 +535,9 @@ var uid$2 = 0  // 什么用？
  * A dep is an observable that can have multiple
  * directives subscribing to it.
  */
-// 每个Dep实例的id都不同？
+// 
 var Dep = function Dep () {
-  this.id = uid$2++ 
+  this.id = uid$2++  // 每个dep实例都有一个不同的uid
   this.subs = []  //  都有一个数组储存 subs ,subs数组里的元素是 watcher实例。
 };
 
@@ -550,8 +550,8 @@ Dep.prototype.removeSub = function removeSub (sub) {
 };
 
 Dep.prototype.depend = function depend () { // dep.target?
-  if (Dep.target) {
-    Dep.target.addDep(this) // Dep.target有一个addDep方法，添加该实例,Dep.target 指向的是一个watcher实例
+  if (Dep.target) {  // Dep的targe若存在
+    Dep.target.addDep(this) // Dep.target有一个addDep方法，添加该实例,Dep.target 指向的是一个watcher实例，这个watcher实例增加这个dep
   }
 };
 
@@ -559,7 +559,7 @@ Dep.prototype.notify = function notify () {
   // stablize the subscriber list first
   var subs = this.subs.slice() 
   for (var i = 0, l = subs.length; i < l; i++) {
-    subs[i].update()  // subs 的每一个元素watcher，都有一个 update方法，每一个watcher实例执行update方法
+    subs[i].update()  // subs里的元素是watcher实例，调用每个watcher实例上的update方法。
   }
 };
 
@@ -702,32 +702,34 @@ var Watcher = function Watcher (
   cb, //  一个回调函数
   options // 其他选项
 ) {
-  if ( options === void 0 ) options = {}; // 为什么用void 0 ？ options 默认值是一个空对象
+  if ( options === void 0 ) options = {}; // options 默认值是一个空对象
 
-  this.vm = vm 
+  this.vm = vm  // 传入的vm
   vm._watchers.push(this)  // vm的__watchers 是一个数组，储存watch这个vm的watcher实例
   // options
+  
   this.deep = !!options.deep  // ？
   this.user = !!options.user  // ?
   this.lazy = !!options.lazy  // ? 懒加载
   this.sync = !!options.sync  // ? 异步
+
   this.expression = expOrFn.toString()  // 如果是函数会返回一个函数表达式
   this.cb = cb   
-  this.id = ++uid$1 // uid for batching,  给每个watcher也设置一个id
-  this.active = true 
+  this.id = ++uid$1 // uid for batching,  给每个watcher也设置一个不同的id
+  this.active = true  // 作用
   this.dirty = this.lazy // for lazy watchers
   
-  this.deps = []  //  watcher 包含dep ？
+  this.deps = []  //  
   this.newDeps = []  // ?
-  this.depIds = new _Set() // ?
+  this.depIds = new _Set() // ? 
   this.newDepIds = new _Set() // ?
   
   // parse expression for getter
   if (typeof expOrFn === 'function') {
-    this.getter = expOrFn   //  如果传入的是一个函数，函数直接赋值给getter
+    this.getter = expOrFn   //  如果传入的exp是一个函数，该函数直接赋值给getter
   } else {
-    this.getter = parsePath(expOrFn) // parsePath 
-    if (!this.getter) {
+    this.getter = parsePath(expOrFn) // 否则解析
+    if (!this.getter) {  // 如果getter函数不存在，则报错
       this.getter = function () {}
       "development" !== 'production' && warn(
         "Failed watching path: \"" + expOrFn + "\" " +
@@ -737,20 +739,21 @@ var Watcher = function Watcher (
       )
     }
   }
-  this.value = this.lazy  //  watcher实例的value
+  this.value = this.lazy  //  如果是懒(惰性)求值，该值暂时设为undefined，如果不是直接调用get函数求值
     ? undefined
     : this.get() // 
 };
 
 /**
- * Evaluate the getter, and re-collect dependencies.
+ * Evaluate the getter, and re-collect dependencies.  // 重新收集依赖关系
  */
 Watcher.prototype.get = function get () {
   pushTarget(this)  // 将之前的Dep.target 指向的watcher 推入栈中，并设置Dep.target为此 watcher实例
+  // 初始化一个watcher实例（如果this.lazy为false）调用了get函数之后，Dep.target函数也将改变，变成当前的watcher实例
   var value = this.getter.call(this.vm, this.vm)  // this.vm作为参数传入getter函数
   // "touch" every property so they are all tracked as
   // dependencies for deep watching
-  if (this.deep) { // ?
+  if (this.deep) { // this.deep表示什么
     traverse(value)  // 穿过
   }
   popTarget() // ?
@@ -759,15 +762,15 @@ Watcher.prototype.get = function get () {
 };
 
 /**
- * Add a dependency to this directive.   为这个指令添加 依赖
+ * Add a dependency to this directive.   为这个指令添加 一个依赖(一个dep实例)
  */
 Watcher.prototype.addDep = function addDep (dep) {
-  var id = dep.id  
-  if (!this.newDepIds.has(id)) {
-    this.newDepIds.add(id)
-    this.newDeps.push(dep)
-    if (!this.depIds.has(id)) {
-      dep.addSub(this)   //  dep添加watcher?
+  var id = dep.id  // 要添加的dep实例id
+  if (!this.newDepIds.has(id)) {  //  如果newDepIds之前不存在
+    this.newDepIds.add(id) // 就把id添加进去
+    this.newDeps.push(dep) // 添加dep实例
+    if (!this.depIds.has(id)) { // 如果depIds没有
+      dep.addSub(this)   //  dep的subs里添加该watcher实例d
     }
   }
 };
@@ -936,7 +939,8 @@ var arrayProto = Array.prototype
 var arrayMethods = Object.create(arrayProto) // 新对象，原型是 Array.protorype
 
 /**
- * Intercept mutating methods and emit events  拦截数组的变异方法 并且 emit events 
+ * Intercept 拦截 mutating methods and emit events  拦截数组的变异方法 并且 emit events 
+ * 这段代码的作用是定义arrayMethods上的属性和属性值
  */
 ;[
   'push',
@@ -949,20 +953,23 @@ var arrayMethods = Object.create(arrayProto) // 新对象，原型是 Array.prot
 ]
 .forEach(function (method) {
   // cache original method
-  var original = arrayProto[method]  // 原始方法 
+  var original = arrayProto[method]  // 缓存 原始方法 
   def(arrayMethods, method, function mutator () {   // 分别对应 obj key value，enum
-    var arguments$1 = arguments;
+    // arrayMethods[method] = mutator
+    var arguments$1 = arguments;  // 缓存 传入的参数 ,同样是个类数组
 
     // avoid leaking arguments:
     // http://jsperf.com/closure-with-arguments
     var i = arguments.length
-    var args = new Array(i)  // 又一个新数组？，函数的参数
+    var args = new Array(i)  // 
     while (i--) {
       args[i] = arguments$1[i]
     }
-    var result = original.apply(this, args)  // 缓存一个结果
-    var ob = this.__ob__
-    var inserted
+    // 传入的参数保存在了一个真正的数组里
+    
+    var result = original.apply(this, args)  // 调用原始方法，缓存一个结果
+    var ob = this.__ob__  //  this指向调用这个函数的对象
+    var inserted  // inserted的作用？
     switch (method) {
       case 'push':
         inserted = args  // 
@@ -997,21 +1004,22 @@ var observerState = {
 }
 
 /**
- * Observer class that are attached to each observed
+ * Observer class that are attached to each observed   // 将一个对象变为observerable
  * object. Once attached, the observer converts target
  * object's property keys into getter/setters that
  * collect dependencies and dispatches updates.
  */
 var Observer = function Observer (value) {
   this.value = value
-  this.dep = new Dep() // 一个dep实例
-  this.vmCount = 0
-  def(value, '__ob__', this) // obj key value  函数的结果的 传入的value 获得一个__ob__属性，指向返回的Observer实例。
+  this.dep = new Dep() // 初始化一个Observer实例的同时也初始化一个dep实例
+  this.vmCount = 0  
+  def(value, '__ob__', this) // 给传入的对象设置一个__ob__属性，指向这个observer实例
   if (Array.isArray(value)) {  //  如果value是一个数组
     var augment = hasProto  // 如果hasProto存在
       ? protoAugment  // (target,src)  将target的原型指向src  target.__proto__ = src
       : copyAugment   // (target,src,keys)  // target[key] = src[key] 默认不可枚举
-    augment(value, arrayMethods, arrayKeys)  //  
+    augment(value, arrayMethods, arrayKeys)  //  将传入的数据对象的原型设置为arrayMethods,这样的话在
+    //value数组上调用数组方法时将绕过原生的数组方法，而使用之前 修改过的方法
     this.observeArray(value)  //  observe数组的每一项
   } else {
     this.walk(value)
@@ -1065,9 +1073,9 @@ function copyAugment (target, src, keys) {
 }
 
 /**
- * Attempt to create an observer instance for a value,  将一个data数据对象转化成一个observer
+ * Attempt to create an observer instance for a value,  为每一个data数据对象产生一个对应的Observer
  * returns the new observer if successfully observed,  返回一个新的observer
- * or the existing observer if the value already has one.  
+ * or the existing observer if the value already has one.  如果已经创建了，返回已经创建的observer
  */
 function observe (value) {
   if (!isObject(value)) {  //  如果value不是一个对象，即原始值，则返回，什么都不做
