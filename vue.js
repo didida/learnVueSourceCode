@@ -565,7 +565,7 @@ Dep.prototype.notify = function notify () {
 
 // the current target watcher being evaluated.
 // this is globally unique because there could be only one
-// watcher being evaluated at any time.
+// watcher being evaluated at any time.  任何时候只能计算一次watcher
 
 Dep.target = null // 一个watcher实例
 var targetStack = []  // 储存watcher
@@ -1012,18 +1012,18 @@ var observerState = {
  */
 var Observer = function Observer (value) {
   this.value = value
-  this.dep = new Dep() // 初始化一个Observer实例的同时也初始化一个dep实例
-  this.vmCount = 0  
+  this.dep = new Dep() // 初始化一个Observer实例的同时也初始化一个dep实例,用于缓存watcher实例
+  this.vmCount = 0  // ?
   def(value, '__ob__', this) // 给传入的对象设置一个__ob__属性，指向这个observer实例
   if (Array.isArray(value)) {  //  如果value是一个数组
-    var augment = hasProto  // 如果hasProto存在
+    var augment = hasProto  // 如果hasProto为true，即支持__proto__属性
       ? protoAugment  // (target,src)  将target的原型指向src  target.__proto__ = src
       : copyAugment   // (target,src,keys)  // target[key] = src[key] 默认不可枚举
     augment(value, arrayMethods, arrayKeys)  //  将传入的数据对象的原型设置为arrayMethods,这样的话在
     //value数组上调用数组方法时将绕过原生的数组方法，而使用之前 修改过的方法
     this.observeArray(value)  //  observe数组的每一项
   } else {
-    this.walk(value) // 如果value是一个对象，
+    this.walk(value) // 如果value是一个对象，将对象上的每一个属性都设置成响应式的
   }
 };
 
@@ -1035,7 +1035,7 @@ var Observer = function Observer (value) {
 Observer.prototype.walk = function walk (obj) {
   var keys = Object.keys(obj) 
   for (var i = 0; i < keys.length; i++) {
-    defineReactive(obj, keys[i], obj[keys[i]]) // 把obj上的所有属性都变成响应的 
+    defineReactive(obj, keys[i], obj[keys[i]]) // 把obj上的所有属性都变成响应式的 
   }
 };
 
@@ -1069,7 +1069,7 @@ function protoAugment (target, src) {
 function copyAugment (target, src, keys) {
   for (var i = 0, l = keys.length; i < l; i++) {
     var key = keys[i]
-    def(target, key, src[key])
+    def(target, key, src[key]) //  target[key] = src[key]
   }
 }
 
@@ -1136,7 +1136,7 @@ function defineReactive (
     get: function reactiveGetter () {
       var value = getter ? getter.call(obj) : val
       if (Dep.target) {  // Dep.target若存在，那就是一个watcher。
-        dep.depend()  // Dep.target.adddep(this)
+        dep.depend()  // Dep.target.adddep(this)，添加依赖
         if (childOb) {
           childOb.dep.depend()  
         }
@@ -1182,7 +1182,7 @@ function set (obj, key, val) {
     obj[key] = val
     return
   }
-  var ob = obj.__ob__
+  var ob = obj.__ob__  // 指向obj对应的observer
   if (obj._isVue || (ob && ob.vmCount)) {
     "development" !== 'production' && warn(
       'Avoid adding reactive properties to a Vue instance or its root $data ' +
@@ -1190,12 +1190,12 @@ function set (obj, key, val) {
     )
     return
   }
-  if (!ob) {  // 不存在ob属性，那就是一个普通对象
+  if (!ob) {  // 不存在ob属性，对象还没有observe
     obj[key] = val
     return
   }
-  defineReactive(ob.value, key, val) 
-  ob.dep.notify() // ***
+  defineReactive(ob.value, key, val)  // 要添加的key变成响应式
+  ob.dep.notify() // ob.dep.notify() 通知更新
   return val
 }
 
@@ -1248,6 +1248,7 @@ function initProps (vm) {   // 初始化 props 选项
       if ("development" !== 'production') {
         //  这个函数的作用？
         //  props对应的每一个key都变成了vm上的直接属性，同时验证这些key值，返回一个value(如果有效的话)，并且提供一个自定义的setter
+        //  并且将每一个属性都变成响应式的属性
         defineReactive(vm, key, validateProp(key, props, propsData, vm), function () {  // 对象  属性 值 setter
           //  key是props对象的key，validateProp返回一个value
           if (vm.$parent && !observerState.isSettingProps) {
@@ -1298,7 +1299,7 @@ function initData (vm) {  //  got
     }
   }
   // observe data
-  observe(data) // 对data做了什么？ data获得了一个__ob__属性，指向一个observer实例 
+  observe(data) // 对data做了什么？ data获得了一个__ob__属性，指向一个observer实例，
   data.__ob__ && data.__ob__.vmCount++ // 
 }
 
@@ -1388,7 +1389,7 @@ function initWatch (vm) {  // 初始化watch  got
   }
 }
 
-function createWatcher (vm, key, handler) {
+function createWatcher (vm, key, handler) {  // 产生一个watcher
   var options
   if (isPlainObject(handler)) {  // 如果handler是对象
     options = handler  
@@ -1397,7 +1398,7 @@ function createWatcher (vm, key, handler) {
   if (typeof handler === 'string') {  // 此时值是方法名
     handler = vm[handler]  // 必须是在methods里定义的方法
   }
-  vm.$watch(key, handler, options)  //  vm.$watch ? 
+  vm.$watch(key, handler, options)  //  
 }
 
 function stateMixin (Vue) {  //  ??????????????????????? 
@@ -1425,16 +1426,16 @@ function stateMixin (Vue) {  //  ???????????????????????
   Vue.prototype.$watch = function (
     expOrFn,  //  key
     cb,  // handler
-    options  //  options (有 deep和immediate 两个属性)
+    options  //  options (可以有 deep和immediate 两个属性)
   ) {
     var vm = this  
     options = options || {}
-    options.user = true  //  ? 
+    options.user = true  //  增加一个user属性 干嘛用的？
     var watcher = new Watcher(vm, expOrFn, cb, options)
     if (options.immediate) {  //  options的immediate属性
       cb.call(vm, watcher.value)  // 原handler
     }
-    return function unwatchFn () {
+    return function unwatchFn () {  //  返回一个取消监听函数
       watcher.teardown()
     }
   }
@@ -1531,30 +1532,30 @@ function cloneVNodes (vnodes) {  //  批量复制
 
 /*  */
 
-function normalizeChildren (  //   ？？？？
-  children,
+function normalizeChildren (  //   标准化子组件，不知道是要干嘛
+  children,  
   ns,
   nestedIndex  //  嵌套层次
 ) {
-  if (isPrimitive(children)) {  //  如果是一个原始值
-    return [createTextVNode(children)]
+  if (isPrimitive(children)) {  //  如果传入的children是一个原始值
+    return [createTextVNode(children)] // 返回一个数组，数组元素是一个文本结点
   }
   if (Array.isArray(children)) {  // 如果是一个数组
-    var res = []
+    var res = []  // 要返回的结果
     for (var i = 0, l = children.length; i < l; i++) {
       var c = children[i]
       var last = res[res.length - 1]  //  最后一个元素
       //  nested
       if (Array.isArray(c)) {  // 如果还是一个数组
         res.push.apply(res, normalizeChildren(c, ns, i))
-      } else if (isPrimitive(c)) {
-        if (last && last.text) {
+      } else if (isPrimitive(c)) {  //  如果c是原始值
+        if (last && last.text) {  // 如果最后一个元素存在，而且最后一个元素的text存在，那么直接加上
           last.text += String(c)
-        } else if (c !== '') {
+        } else if (c !== '') { // 如果最后一个元素不存在
           // convert primitive to vnode
-          res.push(createTextVNode(c))
+          res.push(createTextVNode(c)) // 新建一个文本结点
         }
-      } else if (c instanceof VNode) {
+      } else if (c instanceof VNode) {  //  如果c是一个vnode结点
         if (c.text && last && last.text) {
           last.text += c.text
         } else {
@@ -1574,7 +1575,7 @@ function normalizeChildren (  //   ？？？？
   }
 }
 
-function createTextVNode (val) {  //  产生一个文本结点
+function createTextVNode (val) {  //  产生一个文本结点 ？
   return new VNode(undefined, undefined, undefined, String(val))
 }
 
@@ -1594,11 +1595,13 @@ function getFirstComponentChild (children) {  // 第一个组件类型的子元�
 }
 /**
  * def = {
- *   key: ... ,
+ *   key: hook ,
  *   __injected: {
  *       key: Boolean
  *     }
  * }
+ * 有点类似装饰者模式，如果之前有hook函数，把返回一个新的hook函数，这个新hook函数先执行之前的hook函数，再执行传入的hook函数
+ * 这里还需要判断之前是否已经注入过，判断依据是 传入的def的对象的__injected属性值，如果和key的同名属性值为true，说明之前已经注入过
  */
 function mergeVNodeHook (def, key, hook) {  
   var oldHook = def[key]  //  def? 
@@ -1616,25 +1619,25 @@ function mergeVNodeHook (def, key, hook) {
   }
 }
 
-function updateListeners (  // 更新listeners
+function updateListeners (   //  作用 ？？？
   on,  //  对象
   oldOn, // 同样一个对象
-  add,  // function 一个函数
-  remove
+  add,  // 要增加的监听函数
+  remove // 要移除的监听函数
 ) {
   /**
    * 
    */
   var name, cur, old, fn, event, capture
-  for (name in on) {
-    cur = on[name]
+  for (name in on) {   // 遍历on里的全部属性
+    cur = on[name]  //
     old = oldOn[name]
     if (!cur) {  //  如果属性值为undefined，报错
       "development" !== 'production' && warn(
         ("Handler for event \"" + name + "\" is undefined.")
       )
-    } else if (!old) {  //  
-      capture = name.charAt(0) === '!' // Boolean
+    } else if (!old) {  //  在on里存在 而在 oldOn里不存在
+      capture = name.charAt(0) === '!' // 是否以 ! 开头
       event = capture ? name.slice(1) : name  // 如果name 不是以!开头，name直接赋值给event，否则，去掉!后再赋值给event
       if (Array.isArray(cur)) {  // cur 可以是数组，数组元素是函数
         add(event, (cur.invoker = arrInvoker(cur)), capture)  //  add？
@@ -1668,19 +1671,24 @@ function updateListeners (  // 更新listeners
 
 function arrInvoker (arr) {  // 返回一个函数，
   return function (ev) {
-    var arguments$1 = arguments;
+    var arguments$1 = arguments;  //  ev
 
-    var single = arguments.length === 1 //  是否只传入一个参数 Boolean
+    var single = arguments.length === 1 //  是否只传入了一个参数 Boolean
     for (var i = 0; i < arr.length; i++) {
-      single ? arr[i](ev) : arr[i].apply(null, arguments$1) // arr是一个函数数组，如果只传入一个参数，直接执行，否则，使用apply方法。
+      single ? arr[i](ev) : arr[i].apply(null, arguments$1) // arr是一个函数数组，依次执行里面的函数
+      // 如果只传入一个参数，直接执行，否则，使用apply方法。
     }
   }
 }
-
+/**
+ * o: {
+ *   fn: function
+ * }
+ */
 function fnInvoker (o) { // 传入一个对象，这个对象有fn属性，为一个函数
   return function (ev) {
     var single = arguments.length === 1
-    single ? o.fn(ev) : o.fn.apply(null, arguments)
+    single ? o.fn(ev) : o.fn.apply(null, arguments) // 执行o.fn
   }
 }
 
@@ -1689,14 +1697,14 @@ function fnInvoker (o) { // 传入一个对象，这个对象有fn属性，为�
 var activeInstance = null
 
 function initLifecycle (vm) {  // 生命周期初始化
-  var options = vm.$options
+  var options = vm.$options  //  获得options
 
-  // locate first non-abstract parent
-  var parent = options.parent
-  if (parent && !options.abstract) {  // abstract ?  parent存在，且abstract不存在
-    while (parent.$options.abstract && parent.$parent) {
+  // locate first non-abstract parent  // 找到第一个 non-abstract 父组件
+  var parent = options.parent  //  对组件的父组件的引用
+  if (parent && !options.abstract) {  // abstract ?  parent存在，且abstract属性为false
+    while (parent.$options.abstract && parent.$parent) {  // 一旦碰到abstract为true,或者$parent不存在，循环终止
       parent = parent.$parent
-    } // parent 直到碰到 parent.$options.abstract 为 false,或者 已经到了根实例
+    } 
     parent.$children.push(vm)
   } 
 
@@ -1706,7 +1714,7 @@ function initLifecycle (vm) {  // 生命周期初始化
   vm.$children = []
   vm.$refs = {}
 
-  vm._watcher = null
+  vm._watcher = null  // 
   vm._inactive = false
   vm._isMounted = false
   vm._isDestroyed = false
@@ -1720,19 +1728,19 @@ function lifecycleMixin (Vue) {  // 传入Vue构造函数
     hydrating  // 混合？
   ) {
     var vm = this  // 指向一个Vue实例
-    vm.$el = el
-    if (!vm.$options.render) {  //  render?  如果不存在，必须要有render函数？
-      vm.$options.render = emptyVNode // function ,创建一个空结点
+    vm.$el = el //  设置$el属性
+    if (!vm.$options.render) {  //  如果不存在render函数(如果存在，跳过)
+      vm.$options.render = emptyVNode // render初始化为一个创建空结点的函数
       if ("development" !== 'production') {
         /* istanbul ignore if */
-        if (vm.$options.template) {  // 如果 temlate属性也不存在
+        if (vm.$options.template) {  //不存在render函数但存在temlate属性 报这个错
           warn(
             'You are using the runtime-only build of Vue where the template ' +
             'option is not available. Either pre-compile the templates into ' +
             'render functions, or use the compiler-included build.',
             vm
           )
-        } else {
+        } else { // 
           warn(
             'Failed to mount component: template or render function not defined.',
             vm
@@ -1761,15 +1769,16 @@ function lifecycleMixin (Vue) {  // 传入Vue构造函数
       callHook(vm, 'beforeUpdate')  // 如果已经mounted 执行beforeUpaated钩子函数
     }
     var prevEl = vm.$el  //  缓存当前的el
-    var prevActiveInstance = activeInstance // 缓存 activeInstance
-    activeInstance = vm 
-    var prevVnode = vm._vnode  // vm._vnode ?
-    vm._vnode = vnode // vm._vnode 等于传入的vnode
-    if (!prevVnode) {
+    var prevActiveInstance = activeInstance // 缓存之前的activeInstance
+    activeInstance = vm // 将vm 赋值给当前的activeInstance
+    var prevVnode = vm._vnode  // 缓存之前的vm._vnode ?
+    vm._vnode = vnode // 此时vm._vnode 等于传入的vnode
+    if (!prevVnode) {  // 如果之前不存在
       // Vue.prototype.__patch__ is injected in entry points
       // based on the rendering backend used.
+      // 如果之前不存在vnode，
       vm.$el = vm.__patch__(vm.$el, vnode, hydrating)  // vm.__patch__ ?
-    } else {
+    } else { // 如果存在
       vm.$el = vm.__patch__(prevVnode, vnode)
     }
     activeInstance = prevActiveInstance
@@ -1873,13 +1882,13 @@ function lifecycleMixin (Vue) {  // 传入Vue构造函数
 }
 
 function callHook (vm, hook) {
-  var handlers = vm.$options[hook]
-  if (handlers) {
+  var handlers = vm.$options[hook]  //  在$options里找对应的hook属性
+  if (handlers) { // 是个数组，遍历，依次执行
     for (var i = 0, j = handlers.length; i < j; i++) {
       handlers[i].call(vm)
     }
   }
-  vm.$emit('hook:' + hook)
+  vm.$emit('hook:' + hook) // 发射时间
 }
 
 /*  */
@@ -2548,7 +2557,7 @@ function eventsMixin (Vue) {
 
 var uid = 0
 
-function initMixin (Vue) {
+function initMixin (Vue) {  // 初始化各种Mixin
   Vue.prototype._init = function (options) {
     var vm = this   //  vm指向创建的Vue实例
     // a uid
@@ -2560,10 +2569,10 @@ function initMixin (Vue) {
       // optimize internal component instantiation
       // since dynamic options merging is pretty slow, and none of the
       // internal component options needs special treatment.
-      initInternalComponent(vm, options)
+      initInternalComponent(vm, options)  // 初始化内部组件
     } else {
-      vm.$options = mergeOptions(
-        resolveConstructorOptions(vm),
+      vm.$options = mergeOptions( //
+        resolveConstructorOptions(vm), // 
         options || {},
         vm
       )
@@ -2583,7 +2592,7 @@ function initMixin (Vue) {
   }
 
   function initInternalComponent (vm, options) {
-    var opts = vm.$options = Object.create(resolveConstructorOptions(vm))
+    var opts = vm.$options = Object.create(resolveConstructorOptions(vm)) 
     // doing this because it's faster than dynamic enumeration.
     opts.parent = options.parent
     opts.propsData = options.propsData
@@ -2599,9 +2608,16 @@ function initMixin (Vue) {
   }
 
   function resolveConstructorOptions (vm) {
-    var Ctor = vm.constructor  // 
+    var Ctor = vm.constructor  // vm是Vue的实例，constructor应该指的是Vue构造函数
+    /**
+     *  options: {
+     *    components: Object,
+     *    filters: Object,
+     *    directives: Object
+     *  }
+     */
     var options = Ctor.options 
-    if (Ctor.super) {
+    if (Ctor.super) { //  super
       var superOptions = Ctor.super.options
       var cachedSuperOptions = Ctor.superOptions 
       if (superOptions !== cachedSuperOptions) {  
@@ -2696,7 +2712,7 @@ if ("development" !== 'production') {
 /**
  * Helper that recursively merges two data objects together.
  */
-function mergeData (to, from) {
+function mergeData (to, from) {  // 递归合并两个对象
   var key, toVal, fromVal
   for (key in from) {
     toVal = to[key]
@@ -2765,19 +2781,19 @@ strats.data = function (
 }
 
 /**
- * Hooks and param attributes are merged as arrays.
+ * Hooks and param attributes are merged as arrays. 钩子函数和参数合并进一个数组
  */
 function mergeHook (
   parentVal,
   childVal
 ) {
   return childVal
-    ? parentVal
-      ? parentVal.concat(childVal)
-      : Array.isArray(childVal)
-        ? childVal
-        : [childVal]
-    : parentVal
+    ? parentVal // 如果 childVal存在
+      ? parentVal.concat(childVal) // 如果parent存在，直接合并
+      : Array.isArray(childVal) // 如果parentVal不存在
+        ? childVal  // 如果chilidVal是数组，直接返回
+        : [childVal] // 包装成一个数组返回
+    : parentVal  // 如果childVal 不存在 直接返回parentVal 
 }
 
 config._lifecycleHooks.forEach(function (hook) {
@@ -2852,24 +2868,25 @@ var defaultStrat = function (parentVal, childVal) {
 
 /**
  * Make sure component options get converted to actual
- * constructors.
+ * constructors. //  actual constructors
  */
 function normalizeComponents (options) {
   if (options.components) {
-    var components = options.components
+    var components = options.components  //  options里的components选项
     var def
-    for (var key in components) {
-      var lower = key.toLowerCase()
-      if (isBuiltInTag(lower) || config.isReservedTag(lower)) {
+    for (var key in components) { //  遍历每一个选项
+      var lower = key.toLowerCase() // 
+      if (isBuiltInTag(lower) || config.isReservedTag(lower)) {  //  如果是内建的tag
+        // 也就是是否是 slot component  报个错
         "development" !== 'production' && warn(
           'Do not use built-in or reserved HTML elements as component ' +
           'id: ' + key
         )
-        continue
+        continue // 进入下一个循环
       }
-      def = components[key]
+      def = components[key]  // def 是key对应的属性值，是一个option的对象
       if (isPlainObject(def)) {
-        components[key] = Vue.extend(def)
+        components[key] = Vue.extend(def)  // components的所有值都变成一个构造器
       }
     }
   }
@@ -2877,46 +2894,54 @@ function normalizeComponents (options) {
 
 /**
  * Ensure all props option syntax are normalized into the
- * Object-based format.
+ * Object-based format. // 都变成 Object-based 格式
  */
 function normalizeProps (options) {
   var props = options.props
   if (!props) return
   var res = {}
   var i, val, name
-  if (Array.isArray(props)) {
+  if (Array.isArray(props)) { //  如果props是一个数组
     i = props.length
-    while (i--) {
+    while (i--) { // 遍历 props数组
       val = props[i]
-      if (typeof val === 'string') {
-        name = camelize(val)
-        res[name] = { type: null }
+      if (typeof val === 'string') {  // 如果props[i]是一个字符串
+        name = camelize(val) // 化成驼峰格式
+        res[name] = { type: null }  //  写成一个对象形式
       } else if ("development" !== 'production') {
-        warn('props must be strings when using array syntax.')
+        warn('props must be strings when using array syntax.')  //  当props写成数组格式的时候，元素必须是字符串格式
       }
     }
-  } else if (isPlainObject(props)) {
+  } else if (isPlainObject(props)) {  // 如果props是一个对象
+    /**
+     * eg:
+     *   props: {
+     *     a: {} | 表示 类型 的字符串
+     *     b: {}
+     *     
+     *   }
+     */
     for (var key in props) {
       val = props[key]
-      name = camelize(key)
-      res[name] = isPlainObject(val)
-        ? val
-        : { type: val }
+      name = camelize(key) 
+      res[name] = isPlainObject(val)   // 如果val是对象 保持不变
+        ? val 
+        : { type: val } // 否则还是变成一个对象的形式
     }
   }
-  options.props = res
+  options.props = res  // 设置res为新的props
 }
 
 /**
  * Normalize raw function directives into object format.
  */
-function normalizeDirectives (options) {
+function normalizeDirectives (options) {  // 标准化指令选项
   var dirs = options.directives
   if (dirs) {
-    for (var key in dirs) {
-      var def = dirs[key]
-      if (typeof def === 'function') {
-        dirs[key] = { bind: def, update: def }
+    for (var key in dirs) {  // 遍历指令选项
+      var def = dirs[key] 
+      if (typeof def === 'function') { // 如果是一个函数
+        dirs[key] = { bind: def, update: def } // 给 bind 和 update都调用这个函数,unbind 不设置
       }
     }
   }
@@ -2928,13 +2953,14 @@ function normalizeDirectives (options) {
  */
 function mergeOptions (
   parent,
-  child,
+  child, // child的选项?
   vm
 ) {
   normalizeComponents(child)
   normalizeProps(child)
   normalizeDirectives(child)
-  var extendsFrom = child.extends
+  var extendsFrom = child.extends // child的extends选项
+
   if (extendsFrom) {
     parent = typeof extendsFrom === 'function'
       ? mergeOptions(parent, extendsFrom.options, vm)
