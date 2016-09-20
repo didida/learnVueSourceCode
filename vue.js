@@ -528,7 +528,7 @@ if ("development" !== 'production') {
 /*  */
 
 // ****************************************************************************************************************
-var uid$2 = 0  // 什么用？
+var uid$2 = 0  // 
 
 
 /**
@@ -716,7 +716,7 @@ var Watcher = function Watcher (
   this.expression = expOrFn.toString()  // 如果是函数会返回一个函数表达式
   this.cb = cb   
   this.id = ++uid$1 // uid for batching,  给每个watcher也设置一个不同的id
-  this.active = true  // 作用
+  this.active = true  // 作用 ?
   this.dirty = this.lazy // for lazy watchers
   
   this.deps = []  //  
@@ -753,7 +753,7 @@ Watcher.prototype.get = function get () {
   var value = this.getter.call(this.vm, this.vm)  // this.vm作为参数传入getter函数
   // "touch" every property so they are all tracked as
   // dependencies for deep watching
-  if (this.deep) { // this.deep表示什么
+  if (this.deep) { // this.deep表示什么 监听对象内部值的变化
     traverse(value)  // 穿过
   }
   popTarget() // ?
@@ -1023,7 +1023,7 @@ var Observer = function Observer (value) {
     //value数组上调用数组方法时将绕过原生的数组方法，而使用之前 修改过的方法
     this.observeArray(value)  //  observe数组的每一项
   } else {
-    this.walk(value)
+    this.walk(value) // 如果value是一个对象，
   }
 };
 
@@ -1035,7 +1035,7 @@ var Observer = function Observer (value) {
 Observer.prototype.walk = function walk (obj) {
   var keys = Object.keys(obj) 
   for (var i = 0; i < keys.length; i++) {
-    defineReactive(obj, keys[i], obj[keys[i]]) //  obj key obj[key]
+    defineReactive(obj, keys[i], obj[keys[i]]) // 把obj上的所有属性都变成响应的 
   }
 };
 
@@ -1237,7 +1237,7 @@ function initProps (vm) {   // 初始化 props 选项
   var propsData = vm.$options.propsData   // propsData
   if (props) {  // 如果没有props选项，函数直接结束
 
-    var keys = vm.$options._propKeys = Object.keys(props) // vm.$options新增了一个属性，为一个数组，保存props的所有属性名
+    var keys = vm.$options._propKeys = Object.keys(props) // 获得props的所有属性，同时将这个数字赋值给vm.$options._propKeys
     var isRoot = !vm.$parent   // 如果vm有父组件，当然它就不是根组件
 
     // root instance props should be converted  ？？？？？ 根实例的props应该转变
@@ -1246,6 +1246,8 @@ function initProps (vm) {   // 初始化 props 选项
       var key = keys[i] // props 上的每一个属性名
       /* istanbul ignore else */  // ？
       if ("development" !== 'production') {
+        //  这个函数的作用？
+        //  props对应的每一个key都变成了vm上的直接属性，同时验证这些key值，返回一个value(如果有效的话)，并且提供一个自定义的setter
         defineReactive(vm, key, validateProp(key, props, propsData, vm), function () {  // 对象  属性 值 setter
           //  key是props对象的key，validateProp返回一个value
           if (vm.$parent && !observerState.isSettingProps) {
@@ -1266,12 +1268,12 @@ function initProps (vm) {   // 初始化 props 选项
   }
 }
 
-function initData (vm) {
+function initData (vm) {  //  got
   var data = vm.$options.data
   data = vm._data = typeof data === 'function'  // 如果data是个函数形式,这里给vm新添加一个属性_data
     ? data.call(vm)   // 执行data这个函数，返回一个对象
     : data || {}  // 如果不是函数，data为vm.$options.data,如果不存在，默认设置为一个空对象{}
-  if (!isPlainObject(data)) {  // 如果data不是一个对象，那就是函数没有返回正确的值
+  if (!isPlainObject(data)) {  // 如果data不是一个对象，
     data = {}
     "development" !== 'production' && warn(
       'data functions should return an object.',
@@ -1296,8 +1298,8 @@ function initData (vm) {
     }
   }
   // observe data
-  observe(data) // 
-  data.__ob__ && data.__ob__.vmCount++ // 如果data.__ob__存在，则进行&&后面的运算，如果不存在，则不进行运算
+  observe(data) // 对data做了什么？ data获得了一个__ob__属性，指向一个observer实例 
+  data.__ob__ && data.__ob__.vmCount++ // 
 }
 
 var computedSharedDefinition = {
@@ -1306,6 +1308,7 @@ var computedSharedDefinition = {
   get: noop,  // noop是什么都不做的函数
   set: noop
 }
+//  初始化计算属性
 
 function initComputed (vm) {
   var computed = vm.$options.computed  //  得到computed对象
@@ -1320,39 +1323,41 @@ function initComputed (vm) {
       } else {
         computedSharedDefinition.get = userDef.get  // 如果是个对象，先检查有没有get属性，
           ? userDef.cache !== false  // 如果有，检查cache 属性是否为true
-            ? makeComputedGetter(userDef.get, vm) 
-            : bind(userDef.get, vm)
-          : noop
-        computedSharedDefinition.set = userDef.set
+            ? makeComputedGetter(userDef.get, vm) // cache为true,使用这种方法绑定 
+            : bind(userDef.get, vm) // 否则使用这种方式绑定
+          : noop //如果get属性不存在，空函数，什么都不做
+        computedSharedDefinition.set = userDef.set //  set属性如果存在，绑定之
           ? bind(userDef.set, vm)
-          : noop
+          : noop // 否则什么都不做
       }
-      Object.defineProperty(vm, key, computedSharedDefinition)
+      Object.defineProperty(vm, key, computedSharedDefinition) // 同样，计算属性变成vm的直接属性
     }
   }
 }
 
 function makeComputedGetter (getter, owner) {  //  useDef:function  
+  // watcher.vm = owner  watcher.getter = getter
+  
   var watcher = new Watcher(owner, getter, noop, {
     lazy: true  //  默认是true
-  }) 
+  }) // 因此watcher.dirty = watcher.lazy = true
 
   return function computedGetter () {
     if (watcher.dirty) {
-      watcher.evaluate()
+      watcher.evaluate() // watcher执行evaluate方法，watcher.value = watcher.get() , watcher.dirty = false
     }
-    if (Dep.target) {
-      watcher.depend()
+    if (Dep.target) {  // 如果执行了之前的watcher.get(),Dep.target 还是等于原来的Dep.target
+      watcher.depend() // watcher的deps 每一项执行depend方法
     }
-    return watcher.value
+    return watcher.value // 返回watcher.value
   }
 }
 
-function initMethods (vm) {
+function initMethods (vm) {  // 初始化方法 got
   var methods = vm.$options.methods  // 获得 methods对象
   if (methods) { // 如果存在
     for (var key in methods) {  // 遍历
-      if (methods[key] != null) {  // 
+      if (methods[key] != null) {  
         vm[key] = bind(methods[key], vm)  // methods的属性变成vm实例的属性
       } else if ("development" !== 'production') {
         warn(("Method \"" + key + "\" is undefined in options."), vm)
@@ -1361,22 +1366,23 @@ function initMethods (vm) {
   }
 }
 
-function initWatch (vm) {
-  var watch = vm.$options.watch  // 监视对象 一个对象，键是观察表达式，值是对应回调。
+function initWatch (vm) {  // 初始化watch  got
+  var watch = vm.$options.watch  
+  // 监视对象 一个对象，键是观察表达式，值是对应回调。
   // 值也可以是方法名，或者是对象，包含选项。在实例化时为每个键调用 $watch() 。
   // 如果是字符串，那就是方法名
   // 如果是对象，对象包括handler属性和deep属性
   
   if (watch) {
     for (var key in watch) {
-      var handler = watch[key]  //  这里handler可能是对象，字符串，
-      if (Array.isArray(handler)) {  // 如果是数组 
+      var handler = watch[key]  //  这里handler可能是对象，字符串，或是方法名
+      if (Array.isArray(handler)) {  // 如果是数组,遍历每一项,为每一项产生一个watcher
         for (var i = 0; i < handler.length; i++) {
           createWatcher(vm, key, handler[i])  // 分别对应实例，属性名，处理函数
           // 如果是数组，那么数组里的每一个元素都是一个handler。为每一个元素都创建一个watcher
         }
       } else {
-        createWatcher(vm, key, handler)  
+        createWatcher(vm, key, handler)  // 如果不是，直接createWatcher
       }
     }
   }
