@@ -1008,6 +1008,7 @@ var observerState = {
  * object. Once attached, the observer converts target
  * object's property keys into getter/setters that
  * collect dependencies and dispatches updates.
+ * 初始化一个实例后，将自动value,dep，vmCount属性
  */
 var Observer = function Observer (value) {
   this.value = value
@@ -1032,9 +1033,9 @@ var Observer = function Observer (value) {
  * value type is Object.
  */
 Observer.prototype.walk = function walk (obj) {
-  var keys = Object.keys(obj)
+  var keys = Object.keys(obj) 
   for (var i = 0; i < keys.length; i++) {
-    defineReactive(obj, keys[i], obj[keys[i]])
+    defineReactive(obj, keys[i], obj[keys[i]]) //  obj key obj[key]
   }
 };
 
@@ -1043,7 +1044,7 @@ Observer.prototype.walk = function walk (obj) {
  */
 Observer.prototype.observeArray = function observeArray (items) {
   for (var i = 0, l = items.length; i < l; i++) {
-    observe(items[i])
+    observe(items[i])  //  为数组中的每一个元素都创建一个observer。
   }
 };
 
@@ -1082,8 +1083,9 @@ function observe (value) {
     return
   }
   var ob  
-  if (hasOwn(value, '__ob__') && value.__ob__ instanceof Observer) {  //  value的__ob__属性指向一个Observer实例
-    ob = value.__ob__
+  if (hasOwn(value, '__ob__') && value.__ob__ instanceof Observer) {  //  value的__ob__属性指向一个Observer实例，说明已经给
+    // 这个对象创建过一个observer，那么就直接返回这个observer
+    ob = value.__ob__  // 
   } else if (
     observerState.shouldConvert &&  // 是否需要convert to a reactive property
     !config._isServer &&  // 不是服务器端渲染
@@ -1094,11 +1096,11 @@ function observe (value) {
     ob = new Observer(value)  // 生成一个vm的data所对应的observer,value上会增加一个__ob__属性，指向observer实例
   }
   return ob //  如果value.__ob__已经指向了一个Observer实例，那么返回这个实例，如果没有指向一个实例，先检查上面条件是否全部满足，如果满足，
-            // 创建value的observer实例，反则返回 undefined
+            // 创建value的observer实例，否则返回 undefined
 }
 
 /**
- * Define a reactive property on an Object.  给一个对象创建一个响应式的属性
+ * Define a reactive property on an Object.  将对象的某个属性变成响应式
  */
 function defineReactive (
   obj,  //  对象
@@ -1108,7 +1110,7 @@ function defineReactive (
 ) {
   var dep = new Dep()   // 一个新的dep实例
 
-  var property = Object.getOwnPropertyDescriptor(obj, key)  // 获得指定对象的指定属性的原始属性描述符
+  var property = Object.getOwnPropertyDescriptor(obj, key)  // 获得指定对象的指定属性的属性描述符
   if (property && property.configurable === false) {
     return
   }  // 如果不可配置，返回，什么都不做
@@ -1116,9 +1118,16 @@ function defineReactive (
   // cater for pre-defined getter/setters  
   var getter = property && property.get
   var setter = property && property.set
+  /**
+   * childOb: {
+   *   value: val,
+   *   dep: new Dep(),
+   *   vmCount: 0
+   * }
+   **/
+  var childOb = observe(val)  //  返回val对应的一个observer实例
 
-  var childOb = observe(val)  //  返回Obsercer实例 ，当然也有可能是 undefined
-  Object.defineProperty(obj, key, {
+  Object.defineProperty(obj, key, {  //  重新设置key的属性描述符
     enumerable: true,
     configurable: true,
     
@@ -1126,34 +1135,34 @@ function defineReactive (
     
     get: function reactiveGetter () {
       var value = getter ? getter.call(obj) : val
-      if (Dep.target) {
-        dep.depend()
+      if (Dep.target) {  // Dep.target若存在，那就是一个watcher。
+        dep.depend()  // Dep.target.adddep(this)
         if (childOb) {
           childOb.dep.depend()  
         }
         if (Array.isArray(value)) {
           for (var e, i = 0, l = value.length; i < l; i++) {
-            e = value[i]
+            e = value[i]  // 遍历 value 数组
             e && e.__ob__ && e.__ob__.dep.depend()
           }
         }
       }
       return value
     },
-    set: function reactiveSetter (newVal) {
+    set: function reactiveSetter (newVal) { // 传入一个新值，newVal
       var value = getter ? getter.call(obj) : val
-      if (newVal === value) {
+      if (newVal === value) {  // 没有变化，什么都不做
         return
       }
       if ("development" !== 'production' && customSetter) {
-        customSetter()
+        customSetter()  // 如果有customSetter先执行
       }
       if (setter) {
         setter.call(obj, newVal)
       } else {
         val = newVal
       }
-      childOb = observe(newVal)
+      childOb = observe(newVal)  // 
       dep.notify()
     }
   })
@@ -1181,11 +1190,11 @@ function set (obj, key, val) {
     )
     return
   }
-  if (!ob) {
+  if (!ob) {  // 不存在ob属性，那就是一个普通对象
     obj[key] = val
     return
   }
-  defineReactive(ob.value, key, val)
+  defineReactive(ob.value, key, val) 
   ob.dep.notify() // ***
   return val
 }
@@ -1211,7 +1220,7 @@ function del (obj, key) {
   }
   ob.dep.notify()
 }
-// ***************************************************************************************************************************
+//*****************************************************************************************************************************
 /*  */
 // 设置vm的初始状态
 function initState (vm) {
@@ -1223,17 +1232,18 @@ function initState (vm) {
   initWatch(vm)
 }
 
-function initProps (vm) {
-  var props = vm.$options.props   // 第一次出现props
-  var propsData = vm.$options.propsData   // 第一次出现propsData
-  if (props) {
+function initProps (vm) {   // 初始化 props 选项
+  var props = vm.$options.props   // props
+  var propsData = vm.$options.propsData   // propsData
+  if (props) {  // 如果没有props选项，函数直接结束
+
     var keys = vm.$options._propKeys = Object.keys(props) // vm.$options新增了一个属性，为一个数组，保存props的所有属性名
     var isRoot = !vm.$parent   // 如果vm有父组件，当然它就不是根组件
 
-    // root instance props should be converted  ？？？？？
-    observerState.shouldConvert = isRoot
+    // root instance props should be converted  ？？？？？ 根实例的props应该转变
+    observerState.shouldConvert = isRoot // line 1001
     var loop = function ( i ) {
-      var key = keys[i]
+      var key = keys[i] // props 上的每一个属性名
       /* istanbul ignore else */  // ？
       if ("development" !== 'production') {
         defineReactive(vm, key, validateProp(key, props, propsData, vm), function () {  // 对象  属性 值 setter
@@ -1286,7 +1296,7 @@ function initData (vm) {
     }
   }
   // observe data
-  observe(data)
+  observe(data) // 
   data.__ob__ && data.__ob__.vmCount++ // 如果data.__ob__存在，则进行&&后面的运算，如果不存在，则不进行运算
 }
 
@@ -1299,7 +1309,7 @@ var computedSharedDefinition = {
 
 function initComputed (vm) {
   var computed = vm.$options.computed  //  得到computed对象
-  if (computed) {  // 如果存在
+  if (computed) {  // 如果存在的话，当然如果不存在 函数什么都不做
     for (var key in computed) {
       var userDef = computed[key]  // computed对象的属性值
       // usrtDef可以是对象，也可以是个函数，如果是个对象，对象中有 get 和 set 函数
@@ -1308,9 +1318,9 @@ function initComputed (vm) {
         computedSharedDefinition.get = makeComputedGetter(userDef, vm)   //??????
         computedSharedDefinition.set = noop
       } else {
-        computedSharedDefinition.get = userDef.get
-          ? userDef.cache !== false
-            ? makeComputedGetter(userDef.get, vm)
+        computedSharedDefinition.get = userDef.get  // 如果是个对象，先检查有没有get属性，
+          ? userDef.cache !== false  // 如果有，检查cache 属性是否为true
+            ? makeComputedGetter(userDef.get, vm) 
             : bind(userDef.get, vm)
           : noop
         computedSharedDefinition.set = userDef.set
@@ -1322,7 +1332,7 @@ function initComputed (vm) {
   }
 }
 
-function makeComputedGetter (getter, owner) {
+function makeComputedGetter (getter, owner) {  //  useDef:function  
   var watcher = new Watcher(owner, getter, noop, {
     lazy: true  //  默认是true
   }) 
@@ -2534,13 +2544,13 @@ var uid = 0
 
 function initMixin (Vue) {
   Vue.prototype._init = function (options) {
-    var vm = this
+    var vm = this   //  vm指向创建的Vue实例
     // a uid
-    vm._uid = uid++
+    vm._uid = uid++ // 每个vue实例也各不相同
     // a flag to avoid this being observed
-    vm._isVue = true
+    vm._isVue = true  // 表示是vue实例
     // merge options
-    if (options && options._isComponent) {
+    if (options && options._isComponent) { // 如果options._isComponent存在
       // optimize internal component instantiation
       // since dynamic options merging is pretty slow, and none of the
       // internal component options needs special treatment.
@@ -2575,19 +2585,20 @@ function initMixin (Vue) {
     opts._parentListeners = options._parentListeners
     opts._renderChildren = options._renderChildren
     opts._componentTag = options._componentTag
-    if (options.render) {
+
+    if (options.render) {  // options render ?
       opts.render = options.render
       opts.staticRenderFns = options.staticRenderFns
     }
   }
 
   function resolveConstructorOptions (vm) {
-    var Ctor = vm.constructor
-    var options = Ctor.options
+    var Ctor = vm.constructor  // 
+    var options = Ctor.options 
     if (Ctor.super) {
       var superOptions = Ctor.super.options
-      var cachedSuperOptions = Ctor.superOptions
-      if (superOptions !== cachedSuperOptions) {
+      var cachedSuperOptions = Ctor.superOptions 
+      if (superOptions !== cachedSuperOptions) {  
         // super option changed
         Ctor.superOptions = superOptions
         options = Ctor.options = mergeOptions(superOptions, Ctor.extendOptions)
@@ -2981,27 +2992,27 @@ function resolveAsset (
 
 /*  */
 
-function validateProp (
-  key,
-  propOptions,
+function validateProp (  // 验证props,返回一个value
+  key,  
+  propOptions, // 对象形式
   propsData,
   vm
 ) {
   /* istanbul ignore if */
   if (!propsData) return
   var prop = propOptions[key]
-  var absent = !hasOwn(propsData, key)
-  var value = propsData[key]
+  var absent = !hasOwn(propsData, key) //  propsData中不存在key属性时为true
+  var value = propsData[key]  // 可能存在，也可能不存在
   // handle boolean props
-  if (getType(prop.type) === 'Boolean') {
-    if (absent && !hasOwn(prop, 'default')) {
+  if (getType(prop.type) === 'Boolean') {  // prop是个对象，有type属性
+    if (absent && !hasOwn(prop, 'default')) {  // 如果propsData中不存在且prop对象中没有default属性
       value = false
     } else if (value === '' || value === hyphenate(key)) {
       value = true
     }
   }
   // check default value
-  if (value === undefined) {
+  if (value === undefined) {  // 
     value = getPropDefaultValue(vm, prop, key)
     // since the default value is a fresh copy,
     // make sure to observe it.
@@ -3013,7 +3024,7 @@ function validateProp (
   if ("development" !== 'production') {
     assertProp(prop, key, value, vm, absent)
   }
-  return value
+  return value  
 }
 
 /**
@@ -3022,11 +3033,11 @@ function validateProp (
 function getPropDefaultValue (vm, prop, name) {
   // no default, return undefined
   if (!hasOwn(prop, 'default')) {
-    return undefined
+    return undefined  //  没有default属性，直接返回undefined
   }
-  var def = prop.default
+  var def = prop.default  
   // warn against non-factory defaults for Object & Array
-  if (isObject(def)) {
+  if (isObject(def)) { // 如果def不是原始类型
     "development" !== 'production' && warn(
       'Invalid default value for prop "' + name + '": ' +
       'Props with type Object/Array must use a factory function ' +
@@ -3035,13 +3046,13 @@ function getPropDefaultValue (vm, prop, name) {
     )
   }
   // call factory function for non-Function types
-  return typeof def === 'function' && prop.type !== Function
+  return typeof def === 'function' && prop.type !== Function  // def是一个函数而且prop事先声明是一个函数 ? 不应该是个字符串？
     ? def.call(vm)
     : def
 }
 
 /**
- * Assert whether a prop is valid.
+ * Assert whether a prop is valid.  判断一个prop是否有效
  */
 function assertProp (
   prop,
@@ -3050,30 +3061,36 @@ function assertProp (
   vm,
   absent
 ) {
-  if (prop.required && absent) {
+  if (prop.required && absent) { // 如果在prop中定义了required但是prop中没有
     warn(
       'Missing required prop: "' + name + '"',
       vm
     )
     return
   }
-  if (value == null && !prop.required) {
+
+  if (value == null && !prop.required) {  // value 为undefined 或者 不是必须
     return
   }
-  var type = prop.type
-  var valid = !type || type === true
-  var expectedTypes = []
+  /**
+   * type 可以是一个数组，只要满足数组中任一个指定的类型即满足条件
+   * type 为true ?????
+   */
+  var type = prop.type // prop 的type属性
+  var valid = !type || type === true  // type不存在 或者 type 为true时 valid都为true
+  var expectedTypes = []  // 
   if (type) {
-    if (!Array.isArray(type)) {
-      type = [type]
+    if (!Array.isArray(type)) { // 如果type不是一个数组，那是什么，字符串？
+      type = [type] // type 变成一个数组
     }
-    for (var i = 0; i < type.length && !valid; i++) {
+    for (var i = 0; i < type.length && !valid; i++) {  // 一旦type 变为 true,结束循环
       var assertedType = assertType(value, type[i])
       expectedTypes.push(assertedType.expectedType)
       valid = assertedType.valid
     }
   }
-  if (!valid) {
+
+  if (!valid) {  // 如果无效则报错
     warn(
       'Invalid prop: type check failed for prop "' + name + '".' +
       ' Expected ' + expectedTypes.map(capitalize).join(', ') +
@@ -3082,9 +3099,10 @@ function assertProp (
     )
     return
   }
-  var validator = prop.validator
-  if (validator) {
-    if (!validator(value)) {
+
+  var validator = prop.validator //  可以给prop添加一个自定义validator函数，
+  if (validator) { // 如果有的话
+    if (!validator(value)) { // 但是必须返回true，否则value无效
       warn(
         'Invalid prop: custom validator check failed for prop "' + name + '".',
         vm
@@ -3094,9 +3112,9 @@ function assertProp (
 }
 
 /**
- * Assert the type of a value
+ * Assert the type of a value  // 判断一个值的类型
  */
-function assertType (value, type) {
+function assertType (value, type) {  // type 是构造函数的函数名
   var valid
   var expectedType = getType(type)
   if (expectedType === 'String') {
@@ -3112,11 +3130,11 @@ function assertType (value, type) {
   } else if (expectedType === 'Array') {
     valid = Array.isArray(value)
   } else {
-    valid = value instanceof type
+    valid = value instanceof type  // 是否是自定义类型
   }
   return {
-    valid: valid,
-    expectedType: expectedType
+    valid: valid, // Boolean 
+    expectedType: expectedType  // 构造函数函数名
   }
 }
 
@@ -3126,7 +3144,7 @@ function assertType (value, type) {
  * across different vms / iframes.
  */
 function getType (fn) {
-  var match = fn && fn.toString().match(/^\s*function (\w+)/)
+  var match = fn && fn.toString().match(/^\s*function (\w+)/)  //  函数名？
   return match && match[1]
 }
 
