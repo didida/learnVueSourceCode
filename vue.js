@@ -1888,7 +1888,7 @@ function callHook (vm, hook) {
       handlers[i].call(vm)
     }
   }
-  vm.$emit('hook:' + hook) // 发射时间
+  vm.$emit('hook:' + hook) // 还要触发事件？事件名以 hook:开头来标识
 }
 
 /*  */
@@ -2478,11 +2478,11 @@ function resolveSlots (
 
 /*  */
 
-function initEvents (vm) {
-  vm._events = Object.create(null)
+function initEvents (vm) { // 初始化事件
+  vm._events = Object.create(null)    // 新建一个空对象
   // init parent attached events
-  var listeners = vm.$options._parentListeners
-  var on = bind(vm.$on, vm)
+  var listeners = vm.$options._parentListeners // _parentListeners
+  var on = bind(vm.$on, vm) // 
   var off = bind(vm.$off, vm)
   vm._updateListeners = function (listeners, oldListeners) {
     updateListeners(listeners, oldListeners || {}, on, off)
@@ -2495,7 +2495,7 @@ function initEvents (vm) {
 function eventsMixin (Vue) {
   Vue.prototype.$on = function (event, fn) {
     var vm = this
-    ;(vm._events[event] || (vm._events[event] = [])).push(fn)
+    ;(vm._events[event] || (vm._events[event] = [])).push(fn) //  创建一个监听列表数组，
     return vm
   }
 
@@ -2505,12 +2505,12 @@ function eventsMixin (Vue) {
       vm.$off(event, on)
       fn.apply(vm, arguments)
     }
-    on.fn = fn
-    vm.$on(event, on)
+    on.fn = fn // ??
+    vm.$on(event, on)  
     return vm
   }
 
-  Vue.prototype.$off = function (event, fn) {
+  Vue.prototype.$off = function (event, fn) {  // 取消监听一个事件
     var vm = this
     // all
     if (!arguments.length) {
@@ -2544,7 +2544,7 @@ function eventsMixin (Vue) {
     var cbs = vm._events[event]
     if (cbs) {
       cbs = cbs.length > 1 ? toArray(cbs) : cbs
-      var args = toArray(arguments, 1)
+      var args = toArray(arguments, 1) // 要传入事件函数的参数
       for (var i = 0, l = cbs.length; i < l; i++) {
         cbs[i].apply(vm, args)
       }
@@ -2561,12 +2561,12 @@ function initMixin (Vue) {  // 初始化各种Mixin
   Vue.prototype._init = function (options) {
     var vm = this   //  vm指向创建的Vue实例
     // a uid
-    vm._uid = uid++ // 每个vue实例也各不相同
+    vm._uid = uid++ // 实例的_uid属性
     // a flag to avoid this being observed
     vm._isVue = true  // 表示是vue实例
     // merge options
     if (options && options._isComponent) { // 如果options._isComponent存在
-      // optimize internal component instantiation
+      // optimize internal component instantiation // 充分利用内部组件实例
       // since dynamic options merging is pretty slow, and none of the
       // internal component options needs special treatment.
       initInternalComponent(vm, options)  // 初始化内部组件
@@ -2579,10 +2579,10 @@ function initMixin (Vue) {  // 初始化各种Mixin
     }
     /* istanbul ignore else */
     if ("development" !== 'production') {
-      initProxy(vm)
+      initProxy(vm) //
     } else {}
     // expose real self
-    vm._self = vm
+    vm._self = vm // vm_self ?
     initLifecycle(vm)
     initEvents(vm)
     callHook(vm, 'beforeCreate')
@@ -2637,7 +2637,7 @@ function Vue (options) {
   this._init(options)
 }
 
-initMixin(Vue)
+initMixin(Vue) 
 stateMixin(Vue)
 eventsMixin(Vue)
 lifecycleMixin(Vue)
@@ -2649,7 +2649,7 @@ var formatComponentName
 if ("development" !== 'production') {
   var hasConsole = typeof console !== 'undefined'
 
-  warn = function (msg, vm) {
+  warn = function (msg, vm) { // 用于报错
     if (hasConsole && (!config.silent)) {
       console.error("[Vue warn]: " + msg + " " + (
         vm ? formatLocation(formatComponentName(vm)) : ''
@@ -2658,12 +2658,12 @@ if ("development" !== 'production') {
   }
 
   formatComponentName = function (vm) {
-    if (vm.$root === vm) {
-      return 'root instance'
+    if (vm.$root === vm) { // 如果自身是根实例
+      return 'root instance' 
     }
-    var name = vm._isVue
-      ? vm.$options.name || vm.$options._componentTag
-      : vm.name
+    var name = vm._isVue // 如果是Vue实例
+      ? vm.$options.name || vm.$options._componentTag // 有name选项那返回name值，没有的话就话就返回 _componentTag
+      : vm.name 
     return name ? ("component <" + name + ">") : "anonymous component"
   }
 
@@ -2679,10 +2679,12 @@ if ("development" !== 'production') {
 
 /**
  * Option overwriting strategies are functions that handle
- * how to merge a parent option value and a child option
+ * how to merge a parent option value and a child option  // 怎么合并父组件和子组件的选项
  * value into the final value.
+ * 
+ * config.optionMergeStrategies: Object.create(null)
  */
-var strats = config.optionMergeStrategies
+var strats = config.optionMergeStrategies // 初始化时是一个空对象
 
 /**
  * Options with restrictions
@@ -3026,7 +3028,7 @@ function resolveAsset (
 
 function validateProp (  // 验证props,返回一个value
   key,  
-  propOptions, // 对象形式
+  propOptions, 
   propsData,
   vm
 ) {
@@ -3393,7 +3395,7 @@ var builtInComponents = {
 
 /*  */
 
-function initGlobalAPI (Vue) {
+function initGlobalAPI (Vue) { 
   // config
   var configDef = {}
   configDef.get = function () { return config; }
@@ -3434,11 +3436,11 @@ Vue.version = '2.0.0-rc.6'
 /*  */
 
 // attributes that should be using props for binding
-var mustUseProp = makeMap('value,selected,checked,muted')
+var mustUseProp = makeMap('value,selected,checked,muted') // 用于绑定的props
 
-var isEnumeratedAttr = makeMap('contenteditable,draggable,spellcheck')
+var isEnumeratedAttr = makeMap('contenteditable,draggable,spellcheck') // 可枚举属性
 
-var isBooleanAttr = makeMap(
+var isBooleanAttr = makeMap( // 布尔值属性
   'allowfullscreen,async,autofocus,autoplay,checked,compact,controls,declare,' +
   'default,defaultchecked,defaultmuted,defaultselected,defer,disabled,' +
   'enabled,formnovalidate,hidden,indeterminate,inert,ismap,itemscope,loop,multiple,' +
@@ -3447,7 +3449,7 @@ var isBooleanAttr = makeMap(
   'truespeed,typemustmatch,visible'
 )
 
-var isAttr = makeMap(
+var isAttr = makeMap( // 属性
   'accept,accept-charset,accesskey,action,align,alt,async,autocomplete,' +
   'autofocus,autoplay,autosave,bgcolor,border,buffered,challenge,charset,' +
   'checked,cite,class,code,codebase,color,cols,colspan,content,http-equiv,' +
@@ -3465,11 +3467,11 @@ var isAttr = makeMap(
 
 var xlinkNS = 'http://www.w3.org/1999/xlink'
 
-var isXlink = function (name) {
+var isXlink = function (name) { // xlink:*
   return name.charAt(5) === ':' && name.slice(0, 5) === 'xlink'
 }
 
-var getXlinkProp = function (name) {
+var getXlinkProp = function (name) { // 从第六位开始取
   return isXlink(name) ? name.slice(6, name.length) : ''
 }
 
@@ -3479,11 +3481,11 @@ var isFalsyAttrValue = function (val) {
 
 /*  */
 
-function genClassForVnode (vnode) {
+function genClassForVnode (vnode) { // 收集一个组件的父组件和子组件的所有class
   var data = vnode.data
   var parentNode = vnode
   var childNode = vnode
-  while (childNode.child) {
+  while (childNode.child) { // 直到不存在子节点
     childNode = childNode.child._vnode
     if (childNode.data) {
       data = mergeClassData(childNode.data, data)
@@ -3499,28 +3501,28 @@ function genClassForVnode (vnode) {
 
 function mergeClassData (child, parent) {
   return {
-    staticClass: concat(child.staticClass, parent.staticClass),
+    staticClass: concat(child.staticClass, parent.staticClass), // 合并子节点和父节点的static class
     class: child.class
       ? [child.class, parent.class]
       : parent.class
   }
 }
 
-function genClassFromData (data) {
-  var dynamicClass = data.class
-  var staticClass = data.staticClass
-  if (staticClass || dynamicClass) {
+function genClassFromData (data) { // data: Object
+  var dynamicClass = data.class // 动态class
+  var staticClass = data.staticClass // 静态class 
+  if (staticClass || dynamicClass) { // 有一个存在即可
     return concat(staticClass, stringifyClass(dynamicClass))
   }
   /* istanbul ignore next */
   return ''
 }
 
-function concat (a, b) {
-  return a ? b ? (a + ' ' + b) : a : (b || '')
+function concat (a, b) { // 返回 'a b'的形式
+  return a ? b ?  (a + ' ' + b) : a : (b || '')
 }
 
-function stringifyClass (value) {
+function stringifyClass (value) { // value: String | Array | Object
   var res = ''
   if (!value) {
     return res
@@ -3537,7 +3539,7 @@ function stringifyClass (value) {
         }
       }
     }
-    return res.slice(0, -1)
+    return res.slice(0, -1) // 去掉最后一个空格
   }
   if (isObject(value)) {
     for (var key in value) {
@@ -3556,7 +3558,7 @@ var namespaceMap = {
   math: 'http://www.w3.org/1998/Math/MathML'
 }
 
-var isHTMLTag = makeMap(
+var isHTMLTag = makeMap(  // 所有的html标签
   'html,body,base,head,link,meta,style,title,' +
   'address,article,aside,footer,header,h1,h2,h3,h4,h5,h6,hgroup,nav,section,' +
   'div,dd,dl,dt,figcaption,figure,hr,img,li,main,ol,p,pre,ul,' +
@@ -3570,7 +3572,7 @@ var isHTMLTag = makeMap(
   'content,element,shadow,template'
 )
 
-var isUnaryTag = makeMap(
+var isUnaryTag = makeMap( // 一元标签 ？
   'area,base,br,col,embed,frame,hr,img,input,isindex,keygen,' +
   'link,meta,param,source,track,wbr',
   true
@@ -3578,14 +3580,14 @@ var isUnaryTag = makeMap(
 
 // Elements that you can, intentionally, leave open
 // (and which close themselves)
-var canBeLeftOpenTag = makeMap(
+var canBeLeftOpenTag = makeMap( // 自闭合标签
   'colgroup,dd,dt,li,options,p,td,tfoot,th,thead,tr,source',
   true
 )
 
 // HTML5 tags https://html.spec.whatwg.org/multipage/indices.html#elements-3
 // Phrasing Content https://html.spec.whatwg.org/multipage/dom.html#phrasing-content
-var isNonPhrasingTag = makeMap(
+var isNonPhrasingTag = makeMap(  // html5 phrasing标签 ？
   'address,article,aside,base,blockquote,body,caption,col,colgroup,dd,' +
   'details,dialog,div,dl,dt,fieldset,figcaption,figure,footer,form,' +
   'h1,h2,h3,h4,h5,h6,head,header,hgroup,hr,html,legend,li,menuitem,meta,' +
@@ -3596,20 +3598,20 @@ var isNonPhrasingTag = makeMap(
 
 // this map is intentionally selective, only covering SVG elements that may
 // contain child elements.
-var isSVG = makeMap(
+var isSVG = makeMap( // svg相关
   'svg,animate,circle,clippath,cursor,defs,desc,ellipse,filter,font,' +
   'font-face,g,glyph,image,line,marker,mask,missing-glyph,path,pattern,' +
   'polygon,polyline,rect,switch,symbol,text,textpath,tspan,use,view',
   true
 )
 
-var isPreTag = function (tag) { return tag === 'pre'; }
+var isPreTag = function (tag) { return tag === 'pre'; } //pre-tag
 
 var isReservedTag = function (tag) {
-  return isHTMLTag(tag) || isSVG(tag)
+  return isHTMLTag(tag) || isSVG(tag) // 是否是保留标签
 }
 
-function getTagNamespace (tag) {
+function getTagNamespace (tag) {  //  返回 svg 或 math
   if (isSVG(tag)) {
     return 'svg'
   }
@@ -3620,10 +3622,10 @@ function getTagNamespace (tag) {
   }
 }
 
-var unknownElementCache = Object.create(null)
-function isUnknownElement (tag) {
+var unknownElementCache = Object.create(null) // 一个空对象,缓存已计算过的tag
+function isUnknownElement (tag) { // 是否是未知标签
   /* istanbul ignore if */
-  if (!inBrowser) {
+  if (!inBrowser) { //inBrowser : Boolean
     return true
   }
   if (isReservedTag(tag)) {
@@ -3631,11 +3633,11 @@ function isUnknownElement (tag) {
   }
   tag = tag.toLowerCase()
   /* istanbul ignore if */
-  if (unknownElementCache[tag] != null) {
+  if (unknownElementCache[tag] != null) {  
     return unknownElementCache[tag]
   }
   var el = document.createElement(tag)
-  if (tag.indexOf('-') > -1) {
+  if (tag.indexOf('-') > -1) { // tag字符串中有连字符
     // http://stackoverflow.com/a/28210364/1070244
     return (unknownElementCache[tag] = (
       el.constructor === window.HTMLUnknownElement ||
@@ -3656,7 +3658,7 @@ var isAndroid = UA$1 && UA$1.indexOf('android') > 0
 /**
  * Query an element selector if it's not an element already.
  */
-function query (el) {
+function query (el) { // el: String
   if (typeof el === 'string') {
     var selector = el
     el = document.querySelector(el)
@@ -3667,7 +3669,7 @@ function query (el) {
       return document.createElement('div')
     }
   }
-  return el
+  return el // 如果不是字符串 原样返回
 }
 
 /*  */
@@ -3676,7 +3678,7 @@ function createElement$1 (tagName) {
   return document.createElement(tagName)
 }
 
-function createElementNS (namespace, tagName) {
+function createElementNS (namespace, tagName) { // namespace: 'math' or 'svg'
   return document.createElementNS(namespaceMap[namespace], tagName)
 }
 
@@ -3725,7 +3727,7 @@ function setAttribute (node, key, val) {
 }
 
 
-var nodeOps = Object.freeze({
+var nodeOps = Object.freeze({  //  node options ?
   createElement: createElement$1,
   createElementNS: createElementNS,
   createTextNode: createTextNode,
@@ -3743,7 +3745,7 @@ var nodeOps = Object.freeze({
 
 /*  */
 
-var ref = {
+var ref = { 
   create: function create (_, vnode) {
     registerRef(vnode)
   },
@@ -3800,7 +3802,7 @@ function registerRef (vnode, isRemoval) {
 
 var emptyData = {}
 var emptyNode = new VNode('', emptyData, [])
-var hooks$1 = ['create', 'update', 'postpatch', 'remove', 'destroy']
+var hooks$1 = ['create', 'update', 'postpatch', 'remove', 'destroy'] // 生命周期钩子
 
 function isUndef (s) {
   return s == null
@@ -3810,7 +3812,7 @@ function isDef (s) {
   return s != null
 }
 
-function sameVnode (vnode1, vnode2) {
+function sameVnode (vnode1, vnode2) { // 判断标准 key,tag,isComment,data
   return (
     vnode1.key === vnode2.key &&
     vnode1.tag === vnode2.tag &&
@@ -3819,22 +3821,27 @@ function sameVnode (vnode1, vnode2) {
   )
 }
 
-function createKeyToOldIdx (children, beginIdx, endIdx) {
+function createKeyToOldIdx (children, beginIdx, endIdx) { // child: Array  
   var i, key
   var map = {}
   for (i = beginIdx; i <= endIdx; ++i) {
-    key = children[i].key
-    if (isDef(key)) map[key] = i
+    key = children[i].key // 如果该child上有key属性
+    if (isDef(key)) map[key] = i 
   }
+  /**
+   * map: {
+        key: i:Number
+   * }
+   */
   return map
 }
 
-function createPatchFunction (backend) {
+function createPatchFunction (backend) { // 一个对象 ??? 作用？
   var i, j
   var cbs = {}
 
-  var modules = backend.modules;
-  var nodeOps = backend.nodeOps;
+  var modules = backend.modules;  // Array
+  var nodeOps = backend.nodeOps;  
 
   for (i = 0; i < hooks$1.length; ++i) {
     cbs[hooks$1[i]] = []
@@ -7347,7 +7354,7 @@ function compileToFunctions (
   var _warn = (options && options.warn) || warn
   // detect possible CSP restriction
   /* istanbul ignore if */
-  if ("development" !== 'production') {
+  if ("development" !== 'production') {  // ?????
     try {
       new Function('return 1')
     } catch (e) {
@@ -7389,7 +7396,7 @@ function compileToFunctions (
   return (cache[key] = res)
 }
 
-function makeFunction (code) {
+function makeFunction (code) { // code: String  表示函数体里的内容
   try {
     return new Function(code)
   } catch (e) {
@@ -7464,7 +7471,7 @@ Vue.prototype.$mount = function (
  * Get outerHTML of elements, taking care
  * of SVG elements in IE as well.
  */
-function getOuterHTML (el) {
+function getOuterHTML (el) { // 和innerHTML的区别是包含元素标签
   if (el.outerHTML) {
     return el.outerHTML
   } else {
