@@ -1464,7 +1464,7 @@ var VNode = function VNode (
   children,
   text,
   elm,
-  ns,  //  ns是什么
+  ns,  //  命名空间  namespace
   context,
   componentOptions
 ) {
@@ -1532,7 +1532,7 @@ function cloneVNodes (vnodes) {  //  批量复制
 
 /*  */
 
-function normalizeChildren (  //   标准化子组件，不知道是要干嘛
+function normalizeChildren (  //   标准化子组件，
   children,  
   ns,
   nestedIndex  //  嵌套层次
@@ -1604,7 +1604,7 @@ function getFirstComponentChild (children) {  // 第一个组件类型的子元�
  * 这里还需要判断之前是否已经注入过，判断依据是 传入的def的对象的__injected属性值，如果和key的同名属性值为true，说明之前已经注入过
  */
 function mergeVNodeHook (def, key, hook) {  
-  var oldHook = def[key]  //  def? 
+  var oldHook = def[key]  // 
   if (oldHook) {  //  如果之前存在
     var injectedHash = def.__injected || (def.__injected = {})  //  def是否有__injected属性，如果没有，默认为一个空对象
     if (!injectedHash[key]) {  // 如果之前没有inject过，那么injectedHash[key] 应该为false
@@ -1696,7 +1696,7 @@ function fnInvoker (o) { // 传入一个对象，这个对象有fn属性，为�
 
 var activeInstance = null
 
-function initLifecycle (vm) {  // 生命周期初始化
+function initLifecycle (vm) {  // 生命周期初始化，初始化一些属性
   var options = vm.$options  //  获得options
 
   // locate first non-abstract parent  // 找到第一个 non-abstract 父组件
@@ -1709,12 +1709,12 @@ function initLifecycle (vm) {  // 生命周期初始化
   } 
 
   vm.$parent = parent
-  vm.$root = parent ? parent.$root : vm  // 如果paren存在就是parent.$root 否则等于自身
+  vm.$root = parent ? parent.$root : vm  // 
 
   vm.$children = []
   vm.$refs = {}
 
-  vm._watcher = null  // 
+  vm._watcher = null   
   vm._inactive = false
   vm._isMounted = false
   vm._isDestroyed = false
@@ -1724,7 +1724,7 @@ function initLifecycle (vm) {  // 生命周期初始化
 function lifecycleMixin (Vue) {  // 传入Vue构造函数
 
   Vue.prototype._mount = function (
-    el, // 要挂载的元素
+    el, // 挂载到el元素上
     hydrating  // 混合？
   ) {
     var vm = this  // 指向一个Vue实例
@@ -1749,14 +1749,14 @@ function lifecycleMixin (Vue) {  // 传入Vue构造函数
       }
     }
     callHook(vm, 'beforeMount')  // 执行beforeMount钩子函数
-    vm._watcher = new Watcher(vm, function () {
-      vm._update(vm._render(), hydrating)
+    vm._watcher = new Watcher(vm, function () {  // 初始化一个_update方法
+      vm._update(vm._render(), hydrating)  // vm._render函数执行后，返回一个vnode结点
     }, noop) //  初始化 vm._watcher
 
     hydrating = false
     // root instance, call mounted on self
     // mounted is called for child components in its inserted hook
-    if (vm.$root === vm) {  //  如果自己就是跟实例，执行mounted钩子函数，将vm._isMounted变为true
+    if (vm.$root === vm) {  //  如果自己就是根实例，执行mounted钩子函数，将vm._isMounted变为true
       vm._isMounted = true
       callHook(vm, 'mounted')
     }
@@ -1771,7 +1771,7 @@ function lifecycleMixin (Vue) {  // 传入Vue构造函数
     var prevEl = vm.$el  //  缓存当前的el
     var prevActiveInstance = activeInstance // 缓存之前的activeInstance
     activeInstance = vm // 将vm 赋值给当前的activeInstance
-    var prevVnode = vm._vnode  // 缓存之前的vm._vnode ?
+    var prevVnode = vm._vnode  // 缓存之前的vm._vnode 
     vm._vnode = vnode // 此时vm._vnode 等于传入的vnode
     if (!prevVnode) {  // 如果之前不存在
       // Vue.prototype.__patch__ is injected in entry points
@@ -1894,7 +1894,7 @@ function callHook (vm, hook) {
 /*  */
 
 var hooks = { init: init, prepatch: prepatch, insert: insert, destroy: destroy }
-var hooksToMerge = Object.keys(hooks)
+var hooksToMerge = Object.keys(hooks) //  ['init','prepatch','insert','destroy']
 
 function createComponent (
   Ctor,
@@ -1908,7 +1908,7 @@ function createComponent (
   }
 
   if (isObject(Ctor)) {
-    Ctor = Vue.extend(Ctor)
+    Ctor = Vue.extend(Ctor) //  返回一个Sub构造函数
   }
 
   if (typeof Ctor !== 'function') {
@@ -2634,7 +2634,7 @@ function initMixin (Vue) {  // 初始化各种Mixin
 }
 
 function Vue (options) {
-  this._init(options)
+  this._init(options) // 初始化实例时执行_init方法
 }
 
 initMixin(Vue) 
@@ -2861,6 +2861,9 @@ strats.computed = function (parentVal, childVal) {
 
 /**
  * Default strategy.
+ * 默认的合并策略
+ * 子组件不存在，就用父组件的
+ * 子组件存在，就用子组件自己的
  */
 var defaultStrat = function (parentVal, childVal) {
   return childVal === undefined
@@ -2871,15 +2874,25 @@ var defaultStrat = function (parentVal, childVal) {
 /**
  * Make sure component options get converted to actual
  * constructors. //  actual constructors
+ * 标准化组件选项 components
+ * {
+ *   component1: obj1,
+ *   component2: obj2
+ * } ->
+ * {
+ *   component1: Vue.extend(obj1),
+ *   component2: Vue.extend(obj2)
+ * }
+ * 
  */
 function normalizeComponents (options) {
   if (options.components) {
     var components = options.components  //  options里的components选项
     var def
     for (var key in components) { //  遍历每一个选项
-      var lower = key.toLowerCase() // 
-      if (isBuiltInTag(lower) || config.isReservedTag(lower)) {  //  如果是内建的tag
-        // 也就是是否是 slot component  报个错
+      var lower = key.toLowerCase() // 属性名小写
+      if (isBuiltInTag(lower) || config.isReservedTag(lower)) {  //  如果是内建的tag 
+        // 或者是 slot component  报错
         "development" !== 'production' && warn(
           'Do not use built-in or reserved HTML elements as component ' +
           'id: ' + key
@@ -2897,6 +2910,30 @@ function normalizeComponents (options) {
 /**
  * Ensure all props option syntax are normalized into the
  * Object-based format. // 都变成 Object-based 格式
+ * 该函数的作用是：
+ * 如果props选项是个数组，如[props1,props,...],那么最后props会变成
+ * {
+ *   prop1: {
+ *     type: null
+ *   },
+ *   prop2: {
+ *     type: null
+ *   }
+ * }
+ * 如果props是个对象，如
+ * {
+ *   prop1: String | Object,
+ *   prop2: String | Object
+ * } 
+ * 变成 
+ * {
+ *   prop1: {
+ *     type: String
+ *   },
+ *   prop2: {
+ *   
+ *   }
+ * }
  */
 function normalizeProps (options) {
   var props = options.props
@@ -2936,6 +2973,17 @@ function normalizeProps (options) {
 
 /**
  * Normalize raw function directives into object format.
+ * 标准化指令选项 directives
+ * {
+ *   dir1: Function | Object
+ * } ->
+ * {
+ *   dir1: Object,
+ *   dir2: {
+ *     bind: function,
+ *     update: function
+ *   }
+ * }
  */
 function normalizeDirectives (options) {  // 标准化指令选项
   var dirs = options.directives
@@ -2968,7 +3016,7 @@ function mergeOptions (
       ? mergeOptions(parent, extendsFrom.options, vm)
       : mergeOptions(parent, extendsFrom, vm)
   }
-  if (child.mixins) {
+  if (child.mixins) {  // 子组件options的mixins选项 
     for (var i = 0, l = child.mixins.length; i < l; i++) {
       var mixin = child.mixins[i]
       if (mixin.prototype instanceof Vue) {
@@ -3178,7 +3226,7 @@ function assertType (value, type) {  // type 是构造函数的函数名
  * across different vms / iframes.
  */
 function getType (fn) {
-  var match = fn && fn.toString().match(/^\s*function (\w+)/)  //  函数名？
+  var match = fn && fn.toString().match(/^\s*function (\w+)/)  //  函数名来检查内建类型
   return match && match[1]
 }
 
@@ -3224,7 +3272,7 @@ var util = Object.freeze({
 
 /*  */
 
-function initUse (Vue) {
+function initUse (Vue) {  //  应用插件
   Vue.use = function (plugin) {
     /* istanbul ignore if */
     if (plugin.installed) {
@@ -3285,7 +3333,7 @@ function initExtend (Vue) {
     var Sub = function VueComponent (options) {
       this._init(options)
     }
-    Sub.prototype = Object.create(Super.prototype)
+    Sub.prototype = Object.create(Super.prototype) //  原型委托
     Sub.prototype.constructor = Sub
     Sub.cid = cid++
     Sub.options = mergeOptions(
