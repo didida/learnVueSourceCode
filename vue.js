@@ -1575,7 +1575,7 @@ function normalizeChildren (  //   标准化子组件，
   }
 }
 
-function createTextVNode (val) {  //  产生一个文本结点 ？
+function createTextVNode (val) {  //  产生一个文本结点
   return new VNode(undefined, undefined, undefined, String(val))
 }
 
@@ -1604,7 +1604,7 @@ function getFirstComponentChild (children) {  // 第一个组件类型的子元�
  * 这里还需要判断之前是否已经注入过，判断依据是 传入的def的对象的__injected属性值，如果和key的同名属性值为true，说明之前已经注入过
  */
 function mergeVNodeHook (def, key, hook) {  
-  var oldHook = def[key]  // 
+  var oldHook = def[key]   
   if (oldHook) {  //  如果之前存在
     var injectedHash = def.__injected || (def.__injected = {})  //  def是否有__injected属性，如果没有，默认为一个空对象
     if (!injectedHash[key]) {  // 如果之前没有inject过，那么injectedHash[key] 应该为false
@@ -1709,10 +1709,10 @@ function initLifecycle (vm) {  // 生命周期初始化，初始化一些属性
   } 
 
   vm.$parent = parent
-  vm.$root = parent ? parent.$root : vm  // 
+  vm.$root = parent ? parent.$root : vm  
 
   vm.$children = []
-  vm.$refs = {}
+  vm.$refs = {} // 代表？
 
   vm._watcher = null   
   vm._inactive = false
@@ -1720,8 +1720,11 @@ function initLifecycle (vm) {  // 生命周期初始化，初始化一些属性
   vm._isDestroyed = false
   vm._isBeingDestroyed = false
 }
-
-function lifecycleMixin (Vue) {  // 传入Vue构造函数
+/**
+ * 在Vue原型上定义一些方法
+ * [_mount,_update,_updateFromParent,$forceUpdate,$destroy]
+ */
+function lifecycleMixin (Vue) {  
 
   Vue.prototype._mount = function (
     el, // 挂载到el元素上
@@ -1749,13 +1752,13 @@ function lifecycleMixin (Vue) {  // 传入Vue构造函数
       }
     }
     callHook(vm, 'beforeMount')  // 执行beforeMount钩子函数
-    vm._watcher = new Watcher(vm, function () {  // 初始化一个_update方法
+    vm._watcher = new Watcher(vm, function () {  // 初始化一个_watcher属性
       vm._update(vm._render(), hydrating)  // vm._render函数执行后，返回一个vnode结点
     }, noop) //  初始化 vm._watcher
 
     hydrating = false
     // root instance, call mounted on self
-    // mounted is called for child components in its inserted hook
+    // mounted is called for child components in its inserted hook // 子组件执行自己的钩子的函数
     if (vm.$root === vm) {  //  如果自己就是根实例，执行mounted钩子函数，将vm._isMounted变为true
       vm._isMounted = true
       callHook(vm, 'mounted')
@@ -1770,7 +1773,7 @@ function lifecycleMixin (Vue) {  // 传入Vue构造函数
     }
     var prevEl = vm.$el  //  缓存当前的el
     var prevActiveInstance = activeInstance // 缓存之前的activeInstance
-    activeInstance = vm // 将vm 赋值给当前的activeInstance
+    activeInstance = vm // 将vm 赋值给当前的activeInstance 当前的vm就是activeInstance
     var prevVnode = vm._vnode  // 缓存之前的vm._vnode 
     vm._vnode = vnode // 此时vm._vnode 等于传入的vnode
     if (!prevVnode) {  // 如果之前不存在
@@ -1808,16 +1811,17 @@ function lifecycleMixin (Vue) {  // 传入Vue构造函数
     var hasChildren = !!(vm.$options._renderChildren || renderChildren)
     vm.$options._parentVnode = parentVnode
     vm.$options._renderChildren = renderChildren
+
     // update props
     if (propsData && vm.$options.props) {
       observerState.shouldConvert = false
       if ("development" !== 'production') {
         observerState.isSettingProps = true
       }
-      var propKeys = vm.$options._propKeys || []
+      var propKeys = vm.$options._propKeys || [] // _propKeys就是传入的option.props
       for (var i = 0; i < propKeys.length; i++) {
         var key = propKeys[i]
-        vm[key] = validateProp(key, vm.$options.props, propsData, vm)
+        vm[key] = validateProp(key, vm.$options.props, propsData, vm) // propKeys的每一项变成vm的属性
       }
       observerState.shouldConvert = true
       if ("development" !== 'production') {
@@ -1840,7 +1844,7 @@ function lifecycleMixin (Vue) {  // 传入Vue构造函数
   Vue.prototype.$forceUpdate = function () {  //  强制更新
     var vm = this
     if (vm._watcher) {
-      vm._watcher.update()
+      vm._watcher.update() // 调用update()方法
     }
   }
 
@@ -3073,8 +3077,15 @@ function resolveAsset (
 }
 
 /*  */
-
-function validateProp (  // 验证props,返回一个value
+/*
+ * 函数的作用是验证 props上某个指定的属性
+ * 传入的参数包括指定的key,propOptions === options.props，propsData，vm实例
+ * 首先验证propOptions[key].type 如果需要返回布尔值，返回true 或者 false
+ * 其次验证propsData是否存在指定的key属性值
+ * 如果不存在，调用方法获得一个默认值
+ * 如果存在，直接返回propsData[key]
+ */
+function validateProp ( 
   key,  
   propOptions, 
   propsData,
@@ -3082,25 +3093,26 @@ function validateProp (  // 验证props,返回一个value
 ) {
   /* istanbul ignore if */
   if (!propsData) return
-  var prop = propOptions[key]
-  var absent = !hasOwn(propsData, key) //  propsData中不存在key属性时为true
+  var prop = propOptions[key] // propOption 是 options.props，获得属性key对应的选项
+  var absent = !hasOwn(propsData, key) //  propsData中是否提供了propsData
   var value = propsData[key]  // 可能存在，也可能不存在
   // handle boolean props
-  if (getType(prop.type) === 'Boolean') {  // prop是个对象，有type属性
+  if (getType(prop.type) === 'Boolean') {  // 如果prop应该返回一个布尔值
     if (absent && !hasOwn(prop, 'default')) {  // 如果propsData中不存在且prop对象中没有default属性
-      value = false
-    } else if (value === '' || value === hyphenate(key)) {
-      value = true
+      value = false  //  默认值为false
+    } else if (value === '' || value === hyphenate(key)) {  
+      //如果propsData中提供了key属性，且值是空字符串或者key的连字符格式
+      value = true 
     }
   }
   // check default value
-  if (value === undefined) {  // 
-    value = getPropDefaultValue(vm, prop, key)
+  if (value === undefined) {  // 如果propsData中未给出key属性
+    value = getPropDefaultValue(vm, prop, key) // 获得默认值
     // since the default value is a fresh copy,
     // make sure to observe it.
     var prevShouldConvert = observerState.shouldConvert
     observerState.shouldConvert = true
-    observe(value)
+    observe(value)  //  为value创建一个observer
     observerState.shouldConvert = prevShouldConvert
   }
   if ("development" !== 'production') {
@@ -3112,14 +3124,14 @@ function validateProp (  // 验证props,返回一个value
 /**
  * Get the default value of a prop.
  */
-function getPropDefaultValue (vm, prop, name) {
+function getPropDefaultValue (vm, prop, name) { // for example: prop = props.prop1
   // no default, return undefined
-  if (!hasOwn(prop, 'default')) {
+  if (!hasOwn(prop, 'default')) { // 如果不存在default属性，返回undefined
     return undefined  //  没有default属性，直接返回undefined
   }
   var def = prop.default  
   // warn against non-factory defaults for Object & Array
-  if (isObject(def)) { // 如果def不是原始类型
+  if (isObject(def)) { // 如果def是对象，报错，对象和数组必须以函数的形式返回
     "development" !== 'production' && warn(
       'Invalid default value for prop "' + name + '": ' +
       'Props with type Object/Array must use a factory function ' +
@@ -3129,8 +3141,8 @@ function getPropDefaultValue (vm, prop, name) {
   }
   // call factory function for non-Function types
   return typeof def === 'function' && prop.type !== Function  // def是一个函数而且prop事先声明是一个函数 ? 不应该是个字符串？
-    ? def.call(vm)
-    : def
+    ? def.call(vm) // 否则执行def函数
+    : def  // 直接返回一个原始值
 }
 
 /**
@@ -4280,14 +4292,14 @@ function createPatchFunction (backend) { // 一个对象 ??? 作用？
     return true
   }
 
-  function assertNodeMatch (node, vnode) {
+  function assertNodeMatch (node, vnode) { // 返回一个布尔值
     if (vnode.tag) {
       return (
-        vnode.tag.indexOf('vue-component') === 0 ||
-        vnode.tag === nodeOps.tagName(node).toLowerCase()
+        vnode.tag.indexOf('vue-component') === 0 || // 以vue-component开头
+        vnode.tag === nodeOps.tagName(node).toLowerCase()  // 或者node.tagName.toLowerCase() 是否等于vnode.tag
       )
     } else {
-      return _toString(vnode.text) === node.data
+      return _toString(vnode.text) === node.data  // 不存在node.tag 那就比较 vndoe.text 是否等于node.data
     }
   }
 
