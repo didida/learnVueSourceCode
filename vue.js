@@ -3548,7 +3548,10 @@ var isFalsyAttrValue = function (val) {
   return val == null || val === false
 }
 
-/*  */
+/* 
+ * 合并一个结点的父节点，子节点的所有class 最终返回一个以空格分隔的字符串，
+ * class 包括 staticClass 和 class
+ */
 
 function genClassForVnode (vnode) { // 收集一个组件的父组件和子组件的所有class
   var data = vnode.data
@@ -3557,6 +3560,12 @@ function genClassForVnode (vnode) { // 收集一个组件的父组件和子组�
   while (childNode.child) { // 直到不存在子节点
     childNode = childNode.child._vnode
     if (childNode.data) {
+      /*
+       * data: {
+       *   staticClass,
+       *   class
+       * }
+       */
       data = mergeClassData(childNode.data, data)
     }
   }
@@ -3565,10 +3574,13 @@ function genClassForVnode (vnode) { // 收集一个组件的父组件和子组�
       data = mergeClassData(data, parentNode.data)
     }
   }
-  return genClassFromData(data)
+  return genClassFromData(data)  // 返回一个字符串
 }
 
-function mergeClassData (child, parent) {
+/*
+ * staticClass是字符串形式，class是数组形式
+ */
+function mergeClassData (child, parent) { 
   return {
     staticClass: concat(child.staticClass, parent.staticClass), // 合并子节点和父节点的static class
     class: child.class
@@ -3612,7 +3624,7 @@ function stringifyClass (value) { // value: String | Array | Object
   }
   if (isObject(value)) {
     for (var key in value) {
-      if (value[key]) res += key + ' '
+      if (value[key]) res += key + ' ' // 只要key 和value[key]无关
     }
     return res.slice(0, -1)
   }
@@ -3644,7 +3656,7 @@ var isHTMLTag = makeMap(  // 所有的html标签
 var isUnaryTag = makeMap( // 一元标签 ？
   'area,base,br,col,embed,frame,hr,img,input,isindex,keygen,' +
   'link,meta,param,source,track,wbr',
-  true
+  true // true表示应该小写
 )
 
 // Elements that you can, intentionally, leave open
@@ -3678,6 +3690,7 @@ var isPreTag = function (tag) { return tag === 'pre'; } //pre-tag
 
 var isReservedTag = function (tag) {
   return isHTMLTag(tag) || isSVG(tag) // 是否是保留标签
+  // 如果是HTML标签或者SVG
 }
 
 function getTagNamespace (tag) {  //  返回 svg 或 math
@@ -3703,7 +3716,7 @@ function isUnknownElement (tag) { // 是否是未知标签
   tag = tag.toLowerCase()
   /* istanbul ignore if */
   if (unknownElementCache[tag] != null) {  
-    return unknownElementCache[tag]
+    return unknownElementCache[tag] // Boolean
   }
   var el = document.createElement(tag)
   if (tag.indexOf('-') > -1) { // tag字符串中有连字符
@@ -3721,7 +3734,7 @@ function isUnknownElement (tag) { // 是否是未知标签
 
 var UA$1 = inBrowser && window.navigator.userAgent.toLowerCase() 
 var isIE = UA$1 && /msie|trident/.test(UA$1) // 是否是IE
-var isIE9 = UA$1 && UA$1.indexOf('msie 9.0') > 0 // 是否是IE9以上
+var isIE9 = UA$1 && UA$1.indexOf('msie 9.0') > 0 // 是否是IE9及以上
 var isAndroid = UA$1 && UA$1.indexOf('android') > 0 // 是否是安卓
 
 /**
@@ -3735,13 +3748,15 @@ function query (el) { // el: String
       "development" !== 'production' && warn(
         'Cannot find element: ' + selector
       )
-      return document.createElement('div') // 如果el是字符串，但不存在，返回一个 div 
+      return document.createElement('div') // 如果el是字符串，但文档中不存在，返回一个 div 
     }
   }
-  return el // 如果不是字符串 原样返回
+  return el // 返回文档中的元素，如果el不是一个字符串，原样返回
 }
 
-/*  */
+/*
+ * 变成全局韩式
+ */
 
 function createElement$1 (tagName) {
   return document.createElement(tagName)
@@ -3796,7 +3811,7 @@ function setAttribute (node, key, val) {
 }
 
 
-var nodeOps = Object.freeze({  //  node options ?
+var nodeOps = Object.freeze({  // 定义了一个nodeOps对象，封装了一些函数
   createElement: createElement$1,
   createElementNS: createElementNS,
   createTextNode: createTextNode,
@@ -3812,7 +3827,9 @@ var nodeOps = Object.freeze({  //  node options ?
   setAttribute: setAttribute
 });
 
-/*  */
+/*
+ * 
+ */
 
 var ref = { 
   create: function create (_, vnode) {
@@ -3829,13 +3846,13 @@ var ref = {
   }
 }
 
-function registerRef (vnode, isRemoval) {
-  var key = vnode.data.ref
+function registerRef (vnode, isRemoval) {  // ???
+  var key = vnode.data.ref // ref 
   if (!key) return
 
   var vm = vnode.context
-  var ref = vnode.child || vnode.elm
-  var refs = vm.$refs
+  var ref = vnode.child || vnode.elm // wtf elm
+  var refs = vm.$refs  // vm.$refs 包含注册有v-ref的函数
   if (isRemoval) {
     if (Array.isArray(refs[key])) {
       remove(refs[key], ref)
@@ -4424,7 +4441,7 @@ function forEachDirective (
 ) {
   var dirs = vnode.data.directives
   if (dirs) {
-    for (var i = 0; i < dirs.length; i++) {
+    for (var i = 0; i < dirs.length; i++) {  // 遍历数组
       var dir = dirs[i]
       var def = resolveAsset(vnode.context.$options, 'directives', dir.name, true)
       if (def) {
