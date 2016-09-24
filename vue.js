@@ -1752,7 +1752,7 @@ function lifecycleMixin (Vue) {
       }
     }
     callHook(vm, 'beforeMount')  // 执行beforeMount钩子函数
-    vm._watcher = new Watcher(vm, function () {  // 初始化一个_watcher属性
+    vm._watcher = new Watcher(vm, function () {  // 初始化一个_watcher
       vm._update(vm._render(), hydrating)  // vm._render函数执行后，返回一个vnode结点
     }, noop) //  初始化 vm._watcher
 
@@ -1910,12 +1910,12 @@ function createComponent (
   if (!Ctor) {
     return
   }
-
-  if (isObject(Ctor)) {
+  // Ctor如果是以对象的形式传入，包装成一个Sub构造函数
+  if (isObject(Ctor)) {  
     Ctor = Vue.extend(Ctor) //  返回一个Sub构造函数
   }
 
-  if (typeof Ctor !== 'function') {
+  if (typeof Ctor !== 'function') { // 如果Ctor既不是一个对象，又不是一个函数，报错
     if ("development" !== 'production') {
       warn(("Invalid Component definition: " + (String(Ctor))), context)
     }
@@ -1923,7 +1923,8 @@ function createComponent (
   }
 
   // async component
-  if (!Ctor.cid) {
+  // Ctor.cid  Ctor.resolved
+  if (!Ctor.cid) { // 说明传入的Ctor是一个普通函数
     if (Ctor.resolved) {
       Ctor = Ctor.resolved
     } else {
@@ -2119,6 +2120,7 @@ function extractProps (data, Ctor) {
   // we are only extrating raw values here.
   // validation and default values are handled in the child
   // component itself.
+  // 这里只是把props抽离出来，验证props和求值在子组件中处理
   var propOptions = Ctor.options.props
   if (!propOptions) {
     return
@@ -2262,7 +2264,7 @@ function initRender (vm) {
 }
 
 function renderMixin (Vue) {
-  Vue.prototype.$nextTick = function (fn) {
+  Vue.prototype.$nextTick = function (fn) {  // 原型上设置$nextTick
     nextTick(fn, this)
   }
 
@@ -2366,6 +2368,7 @@ function renderMixin (Vue) {
   }
 
   // render v-for
+  // 列表渲染
   Vue.prototype._l = function renderList (
     val,
     render
@@ -2379,7 +2382,7 @@ function renderMixin (Vue) {
     } else if (typeof val === 'number') {
       ret = new Array(val)
       for (i = 0; i < val; i++) {
-        ret[i] = render(i + 1, i)
+        ret[i] = render(i + 1, i) // 从1开始
       }
     } else if (isObject(val)) {
       keys = Object.keys(val)
@@ -2415,24 +2418,26 @@ function renderMixin (Vue) {
     vnode,
     value,
     asProp) {
-    if (value) {
+    if (value) { //  如果value存在，必须是一个对象或者数组
       if (!isObject(value)) {
         "development" !== 'production' && warn(
           'v-bind without argument expects an Object or Array value',
           this
         )
       } else {
-        if (Array.isArray(value)) {
-          value = toObject(value)
+        if (Array.isArray(value)) { // 如果是个数组，转化为对象
+          value = toObject(value) // 合并成一个对象
         }
         var data = vnode.data
         for (var key in value) {
+          // 如果key是class 或者 style。变成data的直接属性
           if (key === 'class' || key === 'style') {
             data[key] = value[key]
           } else {
-            var hash = asProp || config.mustUseProp(key)
-              ? data.domProps || (data.domProps = {})
-              : data.attrs || (data.attrs = {})
+          // 否则 变成data.domProps 或者 data.attrs的属性
+            var hash = asProp || config.mustUseProp(key) // 
+              ? data.domProps || (data.domProps = {}) // data.domProps？
+              : data.attrs || (data.attrs = {}) //data.attrs
             hash[key] = value[key]
           }
         }
@@ -2440,7 +2445,8 @@ function renderMixin (Vue) {
     }
   }
 
-  // expose v-on keyCodes
+  // expose v-on keyCodes 
+  // 获得键码
   Vue.prototype._k = function getKeyCodes (key) {
     return config.keyCodes[key]
   }
@@ -2483,11 +2489,11 @@ function resolveSlots (
 /*  */
 
 function initEvents (vm) { // 初始化事件
-  vm._events = Object.create(null)    // 新建一个空对象
+  vm._events = Object.create(null)    // 
   // init parent attached events
   var listeners = vm.$options._parentListeners // _parentListeners
-  var on = bind(vm.$on, vm) // 
-  var off = bind(vm.$off, vm)
+  var on = bind(vm.$on, vm) 
+  var off = bind(vm.$off, vm)  //  updateListeners
   vm._updateListeners = function (listeners, oldListeners) {
     updateListeners(listeners, oldListeners || {}, on, off)
   }
@@ -2497,6 +2503,12 @@ function initEvents (vm) { // 初始化事件
 }
 
 function eventsMixin (Vue) {
+  /*
+   * _events: {
+   *   event1: [],
+   *   event2: []
+   * }
+   */
   Vue.prototype.$on = function (event, fn) {
     var vm = this
     ;(vm._events[event] || (vm._events[event] = [])).push(fn) //  创建一个监听列表数组，
@@ -2595,7 +2607,7 @@ function initMixin (Vue) {  // 初始化各种Mixin
     initRender(vm)
   }
 
-  function initInternalComponent (vm, options) {
+  function initInternalComponent (vm, options) { // 初始化vm.$options 添加了一些属性
     var opts = vm.$options = Object.create(resolveConstructorOptions(vm)) 
     // doing this because it's faster than dynamic enumeration.
     opts.parent = options.parent
@@ -2611,23 +2623,18 @@ function initMixin (Vue) {  // 初始化各种Mixin
     }
   }
 
-  function resolveConstructorOptions (vm) {
-    var Ctor = vm.constructor  // vm是Vue的实例，constructor应该指的是Vue构造函数
-    /**
-     *  options: {
-     *    components: Object,
-     *    filters: Object,
-     *    directives: Object
-     *  }
-     */
-    var options = Ctor.options 
-    if (Ctor.super) { //  super
-      var superOptions = Ctor.super.options
-      var cachedSuperOptions = Ctor.superOptions 
+  function resolveConstructorOptions (vm) { //  返回一个options对象
+    var Ctor = vm.constructor  // vm可能是Vue构造函数，也可能是Vue.extend()处理后返回的构造函数
+
+    var options = Ctor.options // Super.options 和 自身传入的options
+    if (Ctor.super) { //  super指向的Vue
+      var superOptions = Ctor.super.options // 获得Vue的Options
+      var cachedSuperOptions = Ctor.superOptions  // 同上
       if (superOptions !== cachedSuperOptions) {  
         // super option changed
         Ctor.superOptions = superOptions
-        options = Ctor.options = mergeOptions(superOptions, Ctor.extendOptions)
+        options = Ctor.options = mergeOptions(superOptions, Ctor.extendOptions) 
+        // Ctor.extendOptions 指的的使用Vue.extend()传入的options
         if (options.name) {
           options.components[options.name] = Ctor
         }
@@ -2640,7 +2647,9 @@ function initMixin (Vue) {  // 初始化各种Mixin
 function Vue (options) {
   this._init(options) // 初始化实例时执行_init方法
 }
-
+/*
+ * 在Vue.propotype上添加属性
+ */
 initMixin(Vue) 
 stateMixin(Vue)
 eventsMixin(Vue)
@@ -2661,7 +2670,7 @@ if ("development" !== 'production') {
     }
   }
 
-  formatComponentName = function (vm) {
+  formatComponentName = function (vm) {  // 用于格式化组件的名称
     if (vm.$root === vm) { // 如果自身是根实例
       return 'root instance' 
     }
@@ -3682,7 +3691,7 @@ function getTagNamespace (tag) {  //  返回 svg 或 math
   }
 }
 
-var unknownElementCache = Object.create(null) // 一个空对象,缓存已计算过的tag
+var unknownElementCache = Object.create(null) // 一个空对象,缓存已处理过的tag
 function isUnknownElement (tag) { // 是否是未知标签
   /* istanbul ignore if */
   if (!inBrowser) { //inBrowser : Boolean
@@ -3710,10 +3719,10 @@ function isUnknownElement (tag) { // 是否是未知标签
 
 /*  */
 
-var UA$1 = inBrowser && window.navigator.userAgent.toLowerCase()
-var isIE = UA$1 && /msie|trident/.test(UA$1)
-var isIE9 = UA$1 && UA$1.indexOf('msie 9.0') > 0
-var isAndroid = UA$1 && UA$1.indexOf('android') > 0
+var UA$1 = inBrowser && window.navigator.userAgent.toLowerCase() 
+var isIE = UA$1 && /msie|trident/.test(UA$1) // 是否是IE
+var isIE9 = UA$1 && UA$1.indexOf('msie 9.0') > 0 // 是否是IE9以上
+var isAndroid = UA$1 && UA$1.indexOf('android') > 0 // 是否是安卓
 
 /**
  * Query an element selector if it's not an element already.
@@ -3726,7 +3735,7 @@ function query (el) { // el: String
       "development" !== 'production' && warn(
         'Cannot find element: ' + selector
       )
-      return document.createElement('div')
+      return document.createElement('div') // 如果el是字符串，但不存在，返回一个 div 
     }
   }
   return el // 如果不是字符串 原样返回
@@ -4731,7 +4740,10 @@ function removeClass (el, cls) {
   }
 }
 
-/*  */
+/*
+ * 处理渐变
+ */
+
 
 var hasTransition = inBrowser && !isIE9
 var TRANSITION = 'transition'
@@ -4863,7 +4875,7 @@ function getTimeout (delays, durations) {
   }))
 }
 
-function toMs (s) {
+function toMs (s) { // 秒变毫秒
   return Number(s.slice(0, -1)) * 1000
 }
 
@@ -5692,7 +5704,7 @@ var decoder = document.createElement('div')
 
 function decodeHTML (html) {
   decoder.innerHTML = html
-  return decoder.textContent
+  return decoder.textContent // textContent 和 innerHTML 的区别是 textContent返回纯文本 而innerHTML返回带html标签的文本
 }
 
 /**
@@ -5708,7 +5720,7 @@ function decodeHTML (html) {
 
 // Regular Expressions for parsing tags and attributes
 var singleAttrIdentifier = /([^\s"'<>\/=]+)/
-var singleAttrAssign = /(?:=)/
+var singleAttrAssign = /(?:=)/ // 匹配 = 号前面的
 var singleAttrValues = [
   // attr value double quotes
   /"([^"]*)"+/.source,
@@ -5728,25 +5740,25 @@ var attribute = new RegExp(
 var ncname = '[a-zA-Z_][\\w\\-\\.]*'
 var qnameCapture = '((?:' + ncname + '\\:)?' + ncname + ')'
 var startTagOpen = new RegExp('^<' + qnameCapture)
-var startTagClose = /^\s*(\/?)>/
+var startTagClose = /^\s*(\/?)>/ // 以任意个空格开头 0个或一个/ >
 var endTag = new RegExp('^<\\/' + qnameCapture + '[^>]*>')
-var doctype = /^<!DOCTYPE [^>]+>/i
+var doctype = /^<!DOCTYPE [^>]+>/i 
 
 var IS_REGEX_CAPTURING_BROKEN = false
-'x'.replace(/x(.)?/g, function (m, g) {
+'x'.replace(/x(.)?/g, function (m, g) {  // replace函数 
   IS_REGEX_CAPTURING_BROKEN = g === ''
 })
 
 // Special Elements (can contain anything)
-var isSpecialTag = makeMap('script,style', true)
+var isSpecialTag = makeMap('script,style', true) // 是否是script 或者是 style
 
 var reCache = {}
 
-var ltRE = /&lt;/g
-var gtRE = /&gt;/g
-var nlRE = /&#10;/g
-var ampRE = /&amp;/g
-var quoteRE = /&quot;/g
+var ltRE = /&lt;/g // "<"
+var gtRE = /&gt;/g // ">"
+var nlRE = /&#10;/g // 换行
+var ampRE = /&amp;/g // "&"
+var quoteRE = /&quot;/g // """"
 
 function decodeAttr (value, shouldDecodeTags, shouldDecodeNewlines) {
   if (shouldDecodeTags) {
@@ -5772,7 +5784,7 @@ function parseHTML (html, options) {
       var textEnd = html.indexOf('<')
       if (textEnd === 0) {
         // Comment:
-        if (/^<!--/.test(html)) {
+        if (/^<!--/.test(html)) {// 以<!--开头 下同
           var commentEnd = html.indexOf('-->')
 
           if (commentEnd >= 0) {
@@ -5800,7 +5812,7 @@ function parseHTML (html, options) {
 
         // End tag:
         var endTagMatch = html.match(endTag)
-        if (endTagMatch) {
+        if (endTagMatch) {  
           var curIndex = index
           advance(endTagMatch[0].length)
           parseEndTag(endTagMatch[0], endTagMatch[1], curIndex, index)
@@ -5856,7 +5868,7 @@ function parseHTML (html, options) {
   // Clean up any remaining tags
   parseEndTag()
 
-  function advance (n) {
+  function advance (n) { // 去掉n之前的部分
     index += n
     html = html.substring(n)
   }
@@ -5931,7 +5943,7 @@ function parseHTML (html, options) {
     }
   }
 
-  function parseEndTag (tag, tagName, start, end) {
+  function parseEndTag (tag, tagName, start, end) { // tag是匹配到的全部字符串  tagName是捕获组，start 是curIndex,end是index
     var pos
     if (start == null) start = index
     if (end == null) end = index
@@ -5939,7 +5951,8 @@ function parseHTML (html, options) {
     // Find the closest opened tag of the same type
     if (tagName) {
       var needle = tagName.toLowerCase()
-      for (pos = stack.length - 1; pos >= 0; pos--) {
+      for (pos = stack.length - 1; pos >= 0; pos--) { // stack是函数一开始定义的一个数组，
+        // 如果stack里之前存在needle，退出循环
         if (stack[pos].tag.toLowerCase() === needle) {
           break
         }
@@ -5952,7 +5965,7 @@ function parseHTML (html, options) {
     if (pos >= 0) {
       // Close all the open elements, up the stack
       for (var i = stack.length - 1; i >= pos; i--) {
-        if (options.end) {
+        if (options.end) { // options是parseHtml传入的options
           options.end(stack[i].tag, start, end)
         }
       }
@@ -5977,36 +5990,36 @@ function parseHTML (html, options) {
 
 /*  */
 
-function parseFilters (exp) {
-  var inSingle = false
-  var inDouble = false
-  var curly = 0
-  var square = 0
-  var paren = 0
+function parseFilters (exp) { //for example:  message | capitalize
+  var inSingle = false // 单引号
+  var inDouble = false // 双引号
+  var curly = 0 // ()
+  var square = 0 // []
+  var paren = 0 // {}
   var lastFilterIndex = 0
   var c, prev, i, expression, filters
 
-  for (i = 0; i < exp.length; i++) {
-    prev = c
+  for (i = 0; i < exp.length; i++) { // 遍历exp数组
+    prev = c // 保存之前的c
     c = exp.charCodeAt(i)
-    if (inSingle) {
+    if (inSingle) { // 在单引号里
       // check single quote
-      if (c === 0x27 && prev !== 0x5C) inSingle = !inSingle
-    } else if (inDouble) {
+      if (c === 0x27 && prev !== 0x5C) inSingle = !inSingle // 0x27单引号 0x5c反斜线
+    } else if (inDouble) { // 在双引号里
       // check double quote
-      if (c === 0x22 && prev !== 0x5C) inDouble = !inDouble
+      if (c === 0x22 && prev !== 0x5C) inDouble = !inDouble // 0x22双引号
     } else if (
-      c === 0x7C && // pipe
-      exp.charCodeAt(i + 1) !== 0x7C &&
+      c === 0x7C && // pipe | 如果没有碰到双引号或者单引号
+      exp.charCodeAt(i + 1) !== 0x7C && // 而且下一个和前一个都不是 | 
       exp.charCodeAt(i - 1) !== 0x7C &&
-      !curly && !square && !paren
+      !curly && !square && !paren // 之前没有有（左）圆括号 方括号 花括号 也就是说不在括号之中
     ) {
-      if (expression === undefined) {
+      if (expression === undefined) { 
         // first filter, end of expression
         lastFilterIndex = i + 1
-        expression = exp.slice(0, i).trim()
+        expression = exp.slice(0, i).trim() // 第一个pipe之前的表达式
       } else {
-        pushFilter()
+        pushFilter() 
       }
     } else {
       switch (c) {
@@ -6023,13 +6036,13 @@ function parseFilters (exp) {
   }
 
   if (expression === undefined) {
-    expression = exp.slice(0, i).trim()
-  } else if (lastFilterIndex !== 0) {
+    expression = exp.slice(0, i).trim() // 如果一直没碰到pipe expression就是整个表达式
+  } else if (lastFilterIndex !== 0) { 
     pushFilter()
   }
 
-  function pushFilter () {
-    (filters || (filters = [])).push(exp.slice(lastFilterIndex, i).trim())
+  function pushFilter () {  // exp传入的exp
+    (filters || (filters = [])).push(exp.slice(lastFilterIndex, i).trim()) // lastFilterIndex到i直接就是一个过滤器名称
     lastFilterIndex = i + 1
   }
 
@@ -6042,32 +6055,32 @@ function parseFilters (exp) {
   return expression
 }
 
-function wrapFilter (exp, filter) {
+function wrapFilter (exp, filter) { // 
   var i = filter.indexOf('(')
-  if (i < 0) {
+  if (i < 0) { // 如果没有左圆括号
     // _f: resolveFilter
-    return ("_f(\"" + filter + "\")(" + exp + ")")
+    return ("_f(\"" + filter + "\")(" + exp + ")")  // _f("filter")(exp)
   } else {
     var name = filter.slice(0, i)
     var args = filter.slice(i + 1)
-    return ("_f(\"" + name + "\")(" + exp + "," + args)
+    return ("_f(\"" + name + "\")(" + exp + "," + args) // _f("name")(exp,args)  这里args已经包含了右括号，
   }
 }
 
 /*  */
 
-var defaultTagRE = /\{\{((?:.|\n)+?)\}\}/g
-var regexEscapeRE = /[-.*+?^${}()|[\]\/\\]/g
+var defaultTagRE = /\{\{((?:.|\n)+?)\}\}/g // {{.或者换行}} 至少一次，非贪婪模式
+var regexEscapeRE = /[-.*+?^${}()|[\]\/\\]/g  // 元字符
 
-var buildRegex = cached(function (delimiters) {
+var buildRegex = cached(function (delimiters) { //  delimiter是含有两个元素的数组
   var open = delimiters[0].replace(regexEscapeRE, '\\$&')
   var close = delimiters[1].replace(regexEscapeRE, '\\$&')
   return new RegExp(open + '((?:.|\\n)+?)' + close, 'g')
 })
 
-function parseText (
+function parseText (  // 解析文本
   text,
-  delimiters
+  delimiters // delimiters: Array
 ) {
   var tagRE = delimiters ? buildRegex(delimiters) : defaultTagRE
   if (!tagRE.test(text)) {
@@ -6104,7 +6117,8 @@ function pluckModuleFunction (
   key
 ) {
   return modules
-    ? modules.map(function (m) { return m[key]; }).filter(function (_) { return _; })
+    ? modules.map(function (m) { return m[key]; }).filter(function (_) { return _; }) 
+    // filter 过滤掉map过后数组元素为空的值
     : []
 }
 
@@ -6186,7 +6200,7 @@ function getBindingAttr (
   }
 }
 
-function getAndRemoveAttr (el, name) {
+function getAndRemoveAttr (el, name) { // attrsMap and attrsList
   var val
   if ((val = el.attrsMap[name]) != null) {
     var list = el.attrsList
@@ -6202,12 +6216,12 @@ function getAndRemoveAttr (el, name) {
 
 /*  */
 
-var dirRE = /^v-|^@|^:/
-var forAliasRE = /(.*)\s+(?:in|of)\s+(.*)/
+var dirRE = /^v-|^@|^:/ // 指令  以v-或者 @ 或者: 开头
+var forAliasRE = /(.*)\s+(?:in|of)\s+(.*)/ // 用于v-for
 var forIteratorRE = /\(([^,]*),([^,]*)(?:,([^,]*))?\)/
-var bindRE = /^:|^v-bind:/
-var onRE = /^@|^v-on:/
-var argRE = /:(.*)$/
+var bindRE = /^:|^v-bind:/ // v-bind  以v_bind 或者: 开头
+var onRE = /^@|^v-on:/ // on 以@或者v-on开头
+var argRE = /:(.*)$/ 
 var modifierRE = /\.[^\.]+/g
 
 var decodeHTMLCached = cached(decodeHTML)
@@ -6606,6 +6620,18 @@ function parseModifiers (name) {
   }
 }
 
+/*
+ * attrs: [
+ *   {
+ *     name: ...
+ *     value: ...
+ *   }
+ * ],
+ * return 
+ * map: {
+ *   name: value
+ * }
+ */
 function makeAttrsMap (attrs) {
   var map = {}
   for (var i = 0, l = attrs.length; i < l; i++) {
@@ -6617,7 +6643,7 @@ function makeAttrsMap (attrs) {
   return map
 }
 
-function findPrevElement (children) {
+function findPrevElement (children) { 
   var i = children.length
   while (i--) {
     if (children[i].tag) return children[i]
@@ -6732,6 +6758,7 @@ function isStatic (node) {
 /*  */
 
 var simplePathRE = /^[A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*|\['.*?'\]|\[".*?"\]|\[\d+\]|\[[A-Za-z_$][\w$]*\])*$/
+//                                                         ['...']    ["..."]  [1234]    []
 
 // keyCode aliases
 var keyCodes = {
@@ -6746,7 +6773,7 @@ var keyCodes = {
   'delete': [8, 46]
 }
 
-var modifierCode = {
+var modifierCode = { // 修饰符
   stop: '$event.stopPropagation();',
   prevent: '$event.preventDefault();',
   self: 'if($event.target !== $event.currentTarget)return;'
@@ -6754,21 +6781,21 @@ var modifierCode = {
 
 function genHandlers (events, native) {
   var res = native ? 'nativeOn:{' : 'on:{'
-  for (var name in events) {
+  for (var name in events) { // events: Object
     res += "\"" + name + "\":" + (genHandler(events[name])) + ","
   }
   return res.slice(0, -1) + '}'
 }
 
-function genHandler (
+function genHandler ( //  返回一个函数
   handler
 ) {
   if (!handler) {
     return 'function(){}'
   } else if (Array.isArray(handler)) {
     return ("[" + (handler.map(genHandler).join(',')) + "]")
-  } else if (!handler.modifiers) {
-    return simplePathRE.test(handler.value)
+  } else if (!handler.modifiers) { 
+    return simplePathRE.test(handler.value) // handler.value
       ? handler.value
       : ("function($event){" + (handler.value) + "}")
   } else {
