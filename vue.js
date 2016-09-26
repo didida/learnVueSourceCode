@@ -1475,7 +1475,7 @@ var VNode = function VNode (
   this.elm = elm
   this.ns = ns
   this.context = context
-  this.key = data && data.key // data是一个对象，对象有一个key属性？
+  this.key = data && data.key 
   this.componentOptions = componentOptions
   this.child = undefined
   this.parent = undefined 
@@ -3067,7 +3067,7 @@ function resolveAsset (
   warnMissing
 ) {
   /* istanbul ignore if */
-  if (typeof id !== 'string') {
+  if (typeof id !== 'string') { // options.type.id
     return
   }
   var assets = options[type]
@@ -3734,7 +3734,7 @@ function isUnknownElement (tag) { // 是否是未知标签
 
 var UA$1 = inBrowser && window.navigator.userAgent.toLowerCase() 
 var isIE = UA$1 && /msie|trident/.test(UA$1) // 是否是IE
-var isIE9 = UA$1 && UA$1.indexOf('msie 9.0') > 0 // 是否是IE9及以上
+var isIE9 = UA$1 && UA$1.indexOf('msie 9.0') > 0 // 是否是IE9
 var isAndroid = UA$1 && UA$1.indexOf('android') > 0 // 是否是安卓
 
 /**
@@ -4442,8 +4442,8 @@ function forEachDirective (
   var dirs = vnode.data.directives
   if (dirs) {
     for (var i = 0; i < dirs.length; i++) {  // 遍历数组
-      var dir = dirs[i]
-      var def = resolveAsset(vnode.context.$options, 'directives', dir.name, true)
+      var dir = dirs[i] 
+      var def = resolveAsset(vnode.context.$options, 'directives', dir.name, true) // options.type.id
       if (def) {
         var oldDirs = oldVnode && oldVnode.data.directives
         if (oldDirs) {
@@ -4487,8 +4487,8 @@ function updateAttrs (oldVnode, vnode) {
     return
   }
   var key, cur, old
-  var elm = vnode.elm
-  var oldAttrs = oldVnode.data.attrs || {}
+  var elm = vnode.elm // ?
+  var oldAttrs = oldVnode.data.attrs || {} 
   var attrs = vnode.data.attrs || {}
   // clone observed objects, as the user probably wants to mutate it
   if (attrs.__ob__) {
@@ -4512,17 +4512,19 @@ function updateAttrs (oldVnode, vnode) {
     }
   }
 }
-
+/*
+ * 给el设置属性
+ */
 function setAttr (el, key, value) {
-  if (isBooleanAttr(key)) {
+  if (isBooleanAttr(key)) {  // 如果key是布尔值的属性
     // set attribute for blank value
     // e.g. <option disabled>Select one</option>
-    if (isFalsyAttrValue(value)) {
+    if (isFalsyAttrValue(value)) {  // 如果要设置为false，就移除该属性，否则给设置属性值
       el.removeAttribute(key)
     } else {
       el.setAttribute(key, key)
     }
-  } else if (isEnumeratedAttr(key)) {
+  } else if (isEnumeratedAttr(key)) { 
     el.setAttribute(key, isFalsyAttrValue(value) || value === 'false' ? 'false' : 'true')
   } else if (isXlink(key)) {
     if (isFalsyAttrValue(value)) {
@@ -4719,18 +4721,18 @@ var style = {
  * Add class with compatibility for SVG since classList is not supported on
  * SVG elements in IE
  */
-function addClass (el, cls) {
+function addClass (el, cls) { //  cls表示要添加的class项
   /* istanbul ignore else */
   if (el.classList) {
-    if (cls.indexOf(' ') > -1) {
+    if (cls.indexOf(' ') > -1) { // 说明有多个class
       cls.split(/\s+/).forEach(function (c) { return el.classList.add(c); })
     } else {
-      el.classList.add(cls)
+      el.classList.add(cls) // 没有空格的话，说明只需要添加一个class
     }
   } else {
     var cur = ' ' + el.getAttribute('class') + ' '
     if (cur.indexOf(' ' + cls + ' ') < 0) {
-      el.setAttribute('class', (cur + cls).trim())
+      el.setAttribute('class', (cur + cls).trim())  // 把cls加在后面
     }
   }
 }
@@ -4762,7 +4764,7 @@ function removeClass (el, cls) {
  */
 
 
-var hasTransition = inBrowser && !isIE9
+var hasTransition = inBrowser && !isIE9 // 是否支持transition
 var TRANSITION = 'transition'
 var ANIMATION = 'animation'
 
@@ -4785,7 +4787,7 @@ if (hasTransition) {
   }
 }
 
-var raf = (inBrowser && window.requestAnimationFrame) || setTimeout
+var raf = (inBrowser && window.requestAnimationFrame) || setTimeout  // ????
 function nextFrame (fn) {
   raf(function () {
     raf(fn)
@@ -4813,9 +4815,9 @@ function whenTransitionEnds (
   var type = ref.type;
   var timeout = ref.timeout;
   var propCount = ref.propCount;
-  if (!type) return cb()
-  var event = type === TRANSITION ? transitionEndEvent : animationEndEvent
-  var ended = 0
+  if (!type) return cb() // 如果type不存在，直接执行回调函数
+  var event = type === TRANSITION ? transitionEndEvent : animationEndEvent // 事件类型
+  var ended = 0 // 已经结束的
   var end = function () {
     el.removeEventListener(event, onEnd)
     cb()
@@ -4828,23 +4830,23 @@ function whenTransitionEnds (
     }
   }
   setTimeout(function () {
-    if (ended < propCount) {
+    if (ended < propCount) { // 如果没有全部结束，也移除事件
       end()
     }
-  }, timeout + 1)
+  }, timeout + 1) // 
   el.addEventListener(event, onEnd)
 }
 
 var transformRE = /\b(transform|all)(,|$)/
 
-function getTransitionInfo (el, expectedType) {
-  var styles = window.getComputedStyle(el)
-  var transitioneDelays = styles[transitionProp + 'Delay'].split(', ')
-  var transitionDurations = styles[transitionProp + 'Duration'].split(', ')
-  var transitionTimeout = getTimeout(transitioneDelays, transitionDurations)
-  var animationDelays = styles[animationProp + 'Delay'].split(', ')
-  var animationDurations = styles[animationProp + 'Duration'].split(', ')
-  var animationTimeout = getTimeout(animationDelays, animationDurations)
+function getTransitionInfo (el, expectedType) { // expectedType 只是表示 是渐变还是动画
+  var styles = window.getComputedStyle(el) // 获得全部的计算属性
+  var transitioneDelays = styles[transitionProp + 'Delay'].split(', ') // Array 渐变延迟时间
+  var transitionDurations = styles[transitionProp + 'Duration'].split(', ') // Array 渐变持续时间
+  var transitionTimeout = getTimeout(transitioneDelays, transitionDurations) // Number 渐变最长时间
+  var animationDelays = styles[animationProp + 'Delay'].split(', ') // Array 动画延迟时间
+  var animationDurations = styles[animationProp + 'Duration'].split(', ') // Array 动画持续时间
+  var animationTimeout = getTimeout(animationDelays, animationDurations) // Number 动画最长时间
 
   var type
   var timeout = 0
@@ -4854,7 +4856,7 @@ function getTransitionInfo (el, expectedType) {
     if (transitionTimeout > 0) {
       type = TRANSITION
       timeout = transitionTimeout
-      propCount = transitionDurations.length
+      propCount = transitionDurations.length // 设置了几个时间 就当然是有多少个prop
     }
   } else if (expectedType === ANIMATION) {
     if (animationTimeout > 0) {
@@ -4862,9 +4864,9 @@ function getTransitionInfo (el, expectedType) {
       timeout = animationTimeout
       propCount = animationDurations.length
     }
-  } else {
+  } else { // 如果都不是
     timeout = Math.max(transitionTimeout, animationTimeout)
-    type = timeout > 0
+    type = timeout > 0 // 谁时间长选谁
       ? transitionTimeout > animationTimeout
         ? TRANSITION
         : ANIMATION
@@ -4887,19 +4889,20 @@ function getTransitionInfo (el, expectedType) {
 }
 
 function getTimeout (delays, durations) {
+ // delays 和 durations为长度相同的的数组，将两个数组的每一项相加取一个最大值
   return Math.max.apply(null, durations.map(function (d, i) {
     return toMs(d) + toMs(delays[i])
   }))
 }
 
 function toMs (s) { // 秒变毫秒
-  return Number(s.slice(0, -1)) * 1000
+  return Number(s.slice(0, -1)) * 1000  // 这里的s.slice(0,-1) 表示去掉最后一个秒的单位s 
 }
 
 /*  */
 
 function enter (vnode) {
-  var el = vnode.elm
+  var el = vnode.elm 
 
   // call leave callback now
   if (el._leaveCb) {
@@ -4913,7 +4916,7 @@ function enter (vnode) {
   }
 
   /* istanbul ignore if */
-  if (el._enterCb || el.nodeType !== 1) {
+  if (el._enterCb || el.nodeType !== 1) { // 不是元素结点直接返回
     return
   }
 
@@ -5019,7 +5022,7 @@ function leave (vnode, rm) {
     el._enterCb()
   }
 
-  var data = resolveTransition(vnode.data.transition)
+  var data = resolveTransition(vnode.data.transition) // 
   if (!data) {
     return rm()
   }
@@ -5098,14 +5101,14 @@ function leave (vnode, rm) {
   }
 }
 
-function resolveTransition (def) {
+function resolveTransition (def) { // def: Object | String 
   if (!def) {
     return
   }
   /* istanbul ignore else */
-  if (typeof def === 'object') {
+  if (typeof def === 'object') { 
     var res = {}
-    if (def.css !== false) {
+    if (def.css !== false) { // def.css?
       extend(res, autoCssTransition(def.name || 'v'))
     }
     extend(res, def)
@@ -5172,6 +5175,7 @@ var patch = createPatchFunction({ nodeOps: nodeOps, modules: modules })
 /**
  * Not type checking this file because flow doesn't like attaching
  * properties to Elements.
+ * 处理 v-model
  */
 
 var modelableTagRE = /^input|select|textarea|vue-component-[0-9]+(-[0-9a-zA-Z_\-]*)?$/
@@ -5180,7 +5184,7 @@ var modelableTagRE = /^input|select|textarea|vue-component-[0-9]+(-[0-9a-zA-Z_\-
 if (isIE9) {
   // http://www.matts411.com/post/internet-explorer-9-oninput/
   document.addEventListener('selectionchange', function () {
-    var el = document.activeElement
+    var el = document.activeElement // 返回文档中当前获得焦点的元素
     if (el && el.vmodel) {
       trigger(el, 'input')
     }
@@ -5203,6 +5207,9 @@ var model = {
       setSelected(el, binding, vnode.context)
     } else {
       if (!isAndroid) {
+        //合成事件：DOM3级新增，用于处理IME的输入序列。
+        //所谓IME，指的是输入法编辑器，可以让用户输入在物理键盘上找不到的字符。
+        //compositionstart、compositionupdate、compositionend三种事件。
         el.addEventListener('compositionstart', onCompositionStart)
         el.addEventListener('compositionend', onCompositionEnd)
       }
@@ -5229,9 +5236,9 @@ var model = {
   }
 }
 
-function setSelected (el, binding, vm) {
+function setSelected (el, binding, vm) { // vnode.context是一个vm
   var value = binding.value
-  var isMultiple = el.multiple
+  var isMultiple = el.multiple // el.multiple表示当前select可以多选
   if (isMultiple && !Array.isArray(value)) {
     "development" !== 'production' && warn(
       "<select multiple v-model=\"" + (binding.expression) + "\"> " +
@@ -5262,7 +5269,7 @@ function setSelected (el, binding, vm) {
   }
 }
 
-function hasNoMatchingOption (value, options) {
+function hasNoMatchingOption (value, options) { // options: Array
   for (var i = 0, l = options.length; i < l; i++) {
     if (getValue(options[i]) === value) {
       return false
@@ -5286,7 +5293,7 @@ function onCompositionEnd (e) {
   trigger(e.target, 'input')
 }
 
-function trigger (el, type) {
+function trigger (el, type) { // 触发事件
   var e = document.createEvent('HTMLEvents')
   e.initEvent(type, true, true)
   el.dispatchEvent(e)
@@ -7509,7 +7516,7 @@ function makeFunction (code) { // code: String  表示函数体里的内容
 }
 
 /*  */
-
+// 根据id找模板
 var idToTemplate = cached(function (id) {
   var el = query(id)
   return el && el.innerHTML
