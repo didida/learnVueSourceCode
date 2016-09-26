@@ -344,7 +344,17 @@ function def (obj, key, val, enumerable) {
 /**
  * Parse simple path.  解析一个路径
  */
-var bailRE = /[^\w\.\$]/  //  ? 正则表达式 ？
+var bailRE = /[^\w\.\$]/  
+/*
+ * 如果 path = 'a.b.c'
+ * obj = {
+ * 	`a: {
+ * 	 	b: {
+ * 	 		c: 
+ * 	 	}
+ * 	}
+ * }
+ */ 
 function parsePath (path) {
   if (bailRE.test(path)) {
     return
@@ -3925,11 +3935,24 @@ function createKeyToOldIdx (children, beginIdx, endIdx) { // child: Array
 function createPatchFunction (backend) { // 一个对象 ??? 作用？
   var i, j
   var cbs = {}
-
-  var modules = backend.modules;  // Array
+  /*
+   * modules: [
+   * 	{
+   * 		create,
+   *   		upadte,
+   *   		...
+   * 	},
+   * 	{
+   * 		create,
+   *   		upadte,
+   *   		...
+   * 	}
+   * ]
+   */
+  var modules = backend.modules;
   var nodeOps = backend.nodeOps;  
 
-  for (i = 0; i < hooks$1.length; ++i) {
+  for (i = 0; i < hooks$1.length; ++i) { // hooks$1 = ['create', 'update', 'postpatch', 'remove', 'destroy']
     cbs[hooks$1[i]] = []
     for (j = 0; j < modules.length; ++j) {
       if (modules[j][hooks$1[i]] !== undefined) cbs[hooks$1[i]].push(modules[j][hooks$1[i]])
@@ -3937,7 +3960,9 @@ function createPatchFunction (backend) { // 一个对象 ??? 作用？
   }
 
   function emptyNodeAt (elm) {
-    return new VNode(nodeOps.tagName(elm).toLowerCase(), {}, [], undefined, elm)
+    return new VNode(nodeOps.tagName(elm).toLowerCase(), {}, [], undefined, elm) 
+    // tag, data, children, text, element
+    // 产生一个只有标签名的空node
   }
 
   function createRmCb (childElm, listeners) {
@@ -3950,7 +3975,7 @@ function createPatchFunction (backend) { // 一个对象 ??? 作用？
     return remove
   }
 
-  function removeElement (el) {
+  function removeElement (el) { // 移除该元素
     var parent = nodeOps.parentNode(el)
     nodeOps.removeChild(parent, el)
   }
@@ -3959,8 +3984,8 @@ function createPatchFunction (backend) { // 一个对象 ??? 作用？
     var i
     var data = vnode.data
     vnode.isRootInsert = !nested
-    if (isDef(data)) {
-      if (isDef(i = data.hook) && isDef(i = i.init)) i(vnode)
+    if (isDef(data)) { 
+      if (isDef(i = data.hook) && isDef(i = i.init)) i(vnode)  // data.hook.init(vnode)
       // after calling the init hook, if the vnode is a child component
       // it should've created a child instance and mounted it. the child
       // component also has set the placeholder vnode's elm.
@@ -4648,15 +4673,16 @@ var domProps = {
   update: updateDOMProps
 }
 
-/*  */
+/*got*/ 
 
 var prefixes = ['Webkit', 'Moz', 'ms']
 
-var testEl
+var testEl // a element
+// 顾名思义 css属性名补全
 var normalize = cached(function (prop) {
   testEl = testEl || document.createElement('div')
   prop = camelize(prop)
-  if (prop !== 'filter' && (prop in testEl.style)) {
+  if (prop !== 'filter' && (prop in testEl.style)) { // props是一个css属性名
     return prop
   }
   var upper = prop.charAt(0).toUpperCase() + prop.slice(1)
@@ -4678,6 +4704,8 @@ function updateStyle (oldVnode, vnode) {
   var style = vnode.data.style || {}
 
   // handle string
+  // cssText 它是一组样式属性及其值的文本表示。这个文本格式化为一个 CSS 样式表，去掉了包围属性和值的元素选择器的花括号。
+  // 如 obj.cssText = " width:200px;position:absolute;left:100px;";
   if (typeof style === 'string') {
     el.style.cssText = style
     return
@@ -4687,7 +4715,7 @@ function updateStyle (oldVnode, vnode) {
 
   // handle array syntax
   if (Array.isArray(style)) {
-    style = vnode.data.style = toObject(style)
+    style = vnode.data.style = toObject(style) // 数组类型的style转化为object类型的
   }
 
   // clone the style for future updates,
@@ -4696,6 +4724,9 @@ function updateStyle (oldVnode, vnode) {
     style = vnode.data.style = extend({}, style)
   }
 
+  // 下面这两个for循环的意思是
+  // 如果old里有的，cur没有，把cur里的设置成一个空字符串
+  // 如果cur里有的，old没有，设置cur
   for (name in oldStyle) {
     if (!style[name]) {
       el.style[normalize(name)] = ''
@@ -4715,7 +4746,7 @@ var style = {
   update: updateStyle
 }
 
-/*  */
+/*got*/
 
 /**
  * Add class with compatibility for SVG since classList is not supported on
@@ -4723,23 +4754,24 @@ var style = {
  */
 function addClass (el, cls) { //  cls表示要添加的class项
   /* istanbul ignore else */
-  if (el.classList) {
-    if (cls.indexOf(' ') > -1) { // 说明有多个class
+  if (el.classList) { // el.classList: Set
+    if (cls.indexOf(' ') > -1) { // 说明有多个class名
       cls.split(/\s+/).forEach(function (c) { return el.classList.add(c); })
     } else {
       el.classList.add(cls) // 没有空格的话，说明只需要添加一个class
     }
   } else {
     var cur = ' ' + el.getAttribute('class') + ' '
-    if (cur.indexOf(' ' + cls + ' ') < 0) {
+    if (cur.indexOf(' ' + cls + ' ') < 0) { // 如果之前没有的话
       el.setAttribute('class', (cur + cls).trim())  // 把cls加在后面
-    }
+    } // 如果没有 什么都不做
   }
 }
 
 /**
  * Remove class with compatibility for SVG since classList is not supported on
  * SVG elements in IE
+ * 移除一个或多个class类名
  */
 function removeClass (el, cls) {
   /* istanbul ignore else */
@@ -5156,19 +5188,19 @@ var transition = inBrowser ? {
 } : {}
 
 var platformModules = [
-  attrs,
-  klass,
-  events,
-  domProps,
-  style,
-  transition
+  attrs, // { create: updateAttrs, update: updateAttrs }
+  klass, // { create: updateClass, update: updateClass }
+  events, // {create: updateDOMListeners,update: updateDOMListener }
+  domProps, // { create: updateDOMProps,update: updateDOMProps }
+  style, // { create: updateStyle,update: updateStyle}
+  transition // {}
 ]
 
 /*  */
 
 // the directive module should be applied last, after all
 // built-in modules have been applied.
-var modules = platformModules.concat(baseModules)
+var modules = platformModules.concat(baseModules)  // baseModules: [ref, directives]
 
 var patch = createPatchFunction({ nodeOps: nodeOps, modules: modules })
 
