@@ -397,7 +397,6 @@ var iosVersion = iosVersionMatch && iosVersionMatch[1].split('_')
 // MutationObserver is unreliable in iOS 9.3 UIWebView
 // detecting it by checking presence of IndexedDB
 // ref #3027
-// 变动观察 bug?
 
 var hasMutationObserverBug =
   iosVersion &&
@@ -471,7 +470,7 @@ if (typeof Set !== 'undefined' && /native code/.test(Set.toString())) {
   _Set = Set
 } else {
   // a non-standard Set polyfill that only works with primitive keys.
-  _Set = (function () {  // set的数据结构此时是个对象，此时和ES6的Set不同
+  _Set = (function () {  // set的数据结构此时是个对象，和ES6的Set不同
     function Set () {
       this.set = Object.create(null)
     }
@@ -525,7 +524,7 @@ if ("development" !== 'production') {
   }
 
 
-  // 看看 proxy？ vm自带一个_renderProxy？
+  // 
   initProxy = function initProxy (vm) {
     if (hasProxy) {
       vm._renderProxy = new Proxy(vm, proxyHandlers)
@@ -756,6 +755,7 @@ var Watcher = function Watcher (
 
 /**
  * Evaluate the getter, and re-collect dependencies.  // 重新收集依赖关系
+ * 
  */
 Watcher.prototype.get = function get () {
   pushTarget(this)  // 将之前的Dep.target 指向的watcher 推入栈中，并设置Dep.target为此 watcher实例
@@ -764,7 +764,7 @@ Watcher.prototype.get = function get () {
   // "touch" every property so they are all tracked as
   // dependencies for deep watching
   if (this.deep) { // this.deep表示什么 监听对象内部值的变化
-    traverse(value)  // 穿过
+    traverse(value)  
   }
   popTarget() // ?
   this.cleanupDeps()
@@ -911,8 +911,8 @@ Watcher.prototype.teardown = function teardown () {
  * getters, so that every nested property inside the object
  * is collected as a "deep" dependency.
  */
-var seenObjects = new _Set()
-function traverse (val, seen) {
+var seenObjects = new _Set() 
+function traverse (val, seen) { 
   var i, keys
   if (!seen) {
     seen = seenObjects
@@ -921,12 +921,12 @@ function traverse (val, seen) {
   var isA = Array.isArray(val)
   var isO = isObject(val)
   if ((isA || isO) && Object.isExtensible(val)) {
-    if (val.__ob__) { //  val is abj
+    if (val.__ob__) { 
       var depId = val.__ob__.dep.id
       if (seen.has(depId)) {
         return
       } else {
-        seen.add(depId)  // seen 是一个set，里面的元素是 dep.id 。
+        seen.add(depId)  // 
       }
     }
     if (isA) {
@@ -6990,7 +6990,7 @@ function genFor (el) {
     '})'
 }
 
-function genData (el) {
+function genData (el) { // el.plain?
   if (el.plain) {
     return
   }
@@ -7061,7 +7061,7 @@ function genData (el) {
 }
 
 function genDirectives (el) {
-  var dirs = el.directives
+  var dirs = el.directives // Array
   if (!dirs) return
   var res = 'directives:['
   var hasRuntime = false
@@ -7251,6 +7251,7 @@ function transformNode (el, options) {
   if (classBinding) {
     el.classBinding = classBinding
   }
+
 }
 
 function genData$1 (el) {
@@ -7557,7 +7558,7 @@ var idToTemplate = cached(function (id) {
 var mount = Vue.prototype.$mount
 Vue.prototype.$mount = function (
   el,
-  hydrating
+  hydrating // 
 ) {
   el = el && query(el)
 
@@ -7567,20 +7568,20 @@ Vue.prototype.$mount = function (
       "Do not mount Vue to <html> or <body> - mount to normal elements instead."
     )
     return this
-  }
+  } // 不能直接挂载在body或html元素上
 
   var options = this.$options
-  // resolve template/el and convert to render function
+  // resolve template/el and convert to render function // convert to render function 
   if (!options.render) {
     var template = options.template
     var isFromDOM = false
     if (template) {
-      if (typeof template === 'string') {
+      if (typeof template === 'string') { // template 如果以#开头，那就是在文档中找对应的id
         if (template.charAt(0) === '#') {
           isFromDOM = true
           template = idToTemplate(template)
         }
-      } else if (template.nodeType) {
+      } else if (template.nodeType) { // template 可以设置一个对象了？
         isFromDOM = true
         template = template.innerHTML
       } else {
@@ -7592,7 +7593,7 @@ Vue.prototype.$mount = function (
     } else if (el) {
       isFromDOM = true
       template = getOuterHTML(el)
-    }
+    } 
     if (template) {
       var ref = compileToFunctions(template, {
         warn: warn,
@@ -7619,7 +7620,7 @@ function getOuterHTML (el) { // 和innerHTML的区别是包含元素标签
     return el.outerHTML
   } else {
     var container = document.createElement('div')
-    container.appendChild(el.cloneNode(true))
+    container.appendChild(el.cloneNode(true)) // cloneNode属于原生方法，获得一个结点的拷贝，并返回该结点
     return container.innerHTML
   }
 }
