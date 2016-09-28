@@ -16,7 +16,6 @@
  */
 
 // 将一个valeu 转化成一个字符串
-
 function _toString (val) {
   return val == null
     ? ''
@@ -414,7 +413,7 @@ var hasMutationObserverBug =
  * @param {Object} ctx
  */
 var nextTick = (function () {
-  var callbacks = []
+  var callbacks = [] 
   var pending = false  // pending的作用
   var timerFunc
   function nextTickHandler () {
@@ -529,7 +528,7 @@ if ("development" !== 'production') {
     if (hasProxy) {
       vm._renderProxy = new Proxy(vm, proxyHandlers)
     } else {
-      vm._renderProxy = vm
+      vm._renderProxy = vm // 如果没有 什么都不做
     }
   }
 }
@@ -713,11 +712,11 @@ var Watcher = function Watcher (
 ) {
   if ( options === void 0 ) options = {}; // options 默认值是一个空对象
 
-  this.vm = vm  // 传入的vm
+  this.vm = vm  
   vm._watchers.push(this)  // vm的__watchers 是一个数组，储存watch这个vm的watcher实例
   // options
   
-  this.deep = !!options.deep  // ？
+  this.deep = !!options.deep  
   this.user = !!options.user  // ?
   this.lazy = !!options.lazy  // ? 懒加载
   this.sync = !!options.sync  // ? 异步
@@ -789,7 +788,7 @@ Watcher.prototype.addDep = function addDep (dep) {
  * Clean up for dependency collection.
  */
 Watcher.prototype.cleanupDeps = function cleanupDeps () {
-    var this$1 = this;
+  var this$1 = this; 
 
   var i = this.deps.length
   while (i--) {
@@ -916,7 +915,7 @@ function traverse (val, seen) {
   var i, keys
   if (!seen) {
     seen = seenObjects
-    seen.clear()
+    seen.clear() // 初始化seen为一个set
   }
   var isA = Array.isArray(val)
   var isO = isObject(val)
@@ -977,9 +976,9 @@ var arrayMethods = Object.create(arrayProto) // 新对象，原型是 Array.prot
     }
     // 传入的参数保存在了一个真正的数组里
     
-    var result = original.apply(this, args)  // 调用原始方法，缓存一个结果
+    var result = original.apply(this, args)  // 调用原始方法，得到原值
     var ob = this.__ob__  //  this指向调用这个函数的对象
-    var inserted  // inserted的作用？
+    var inserted  // 新加入的数组
     switch (method) {
       case 'push':
         inserted = args  // 
@@ -1145,7 +1144,7 @@ function defineReactive (
     
     get: function reactiveGetter () {
       var value = getter ? getter.call(obj) : val
-      if (Dep.target) {  // Dep.target若存在，那就是一个watcher。
+      if (Dep.target) {  // 
         dep.depend()  // Dep.target.adddep(this)，添加依赖
         if (childOb) {
           childOb.dep.depend()  
@@ -1258,7 +1257,7 @@ function initProps (vm) {   // 初始化 props 选项
       if ("development" !== 'production') {
         //  这个函数的作用？
         //  props对应的每一个key都变成了vm上的直接属性，同时验证这些key值，返回一个value(如果有效的话)，并且提供一个自定义的setter
-        //  并且将每一个属性都变成响应式的属性
+        //  并且将每一个属性都变成响应式的属性,而且每一个属性都在vm上
         defineReactive(vm, key, validateProp(key, props, propsData, vm), function () {  // 对象  属性 值 setter
           //  key是props对象的key，validateProp返回一个value
           if (vm.$parent && !observerState.isSettingProps) {
@@ -1309,7 +1308,7 @@ function initData (vm) {  //  got
     }
   }
   // observe data
-  observe(data) // 对data做了什么？ data获得了一个__ob__属性，指向一个observer实例，
+  observe(data) // 对data做了什么？ data获得了一个__ob__属性，指向一个observer实例，data上的每一个属性都变成响应式的
   data.__ob__ && data.__ob__.vmCount++ // 
 }
 
@@ -1480,7 +1479,7 @@ var VNode = function VNode (
 ) {
   this.tag = tag
   this.data = data
-  this.children = children
+  this.children = children 
   this.text = text
   this.elm = elm
   this.ns = ns
@@ -1554,7 +1553,7 @@ function normalizeChildren (  //   标准化子组件，
     var res = []  // 要返回的结果
     for (var i = 0, l = children.length; i < l; i++) {
       var c = children[i]
-      var last = res[res.length - 1]  //  最后一个元素
+      var last = res[res.length - 1]  //  每一次遍历，last都指向最后一个元素
       //  nested
       if (Array.isArray(c)) {  // 如果还是一个数组
         res.push.apply(res, normalizeChildren(c, ns, i))
@@ -1679,7 +1678,7 @@ function updateListeners (   //  作用 ？？？
   }
 }
 
-function arrInvoker (arr) {  // 返回一个函数，
+function arrInvoker (arr) {
   return function (ev) {
     var arguments$1 = arguments;  //  ev
 
@@ -1702,7 +1701,9 @@ function fnInvoker (o) { // 传入一个对象，这个对象有fn属性，为�
   }
 }
 
-/*  */
+/*  
+ * 初始化生命周期相关的一些属性 包括 parent,children,root,refs
+ */
 
 var activeInstance = null
 
@@ -1722,7 +1723,7 @@ function initLifecycle (vm) {  // 生命周期初始化，初始化一些属性
   vm.$root = parent ? parent.$root : vm  
 
   vm.$children = []
-  vm.$refs = {} // 代表？
+  vm.$refs = {} 
 
   vm._watcher = null   
   vm._inactive = false
@@ -1731,7 +1732,7 @@ function initLifecycle (vm) {  // 生命周期初始化，初始化一些属性
   vm._isBeingDestroyed = false
 }
 /**
- * 在Vue原型上定义一些方法
+ * 在Vue原型上定义一些生命周期相关方法
  * [_mount,_update,_updateFromParent,$forceUpdate,$destroy]
  */
 function lifecycleMixin (Vue) {  
@@ -1896,7 +1897,7 @@ function lifecycleMixin (Vue) {
 }
 
 function callHook (vm, hook) {
-  var handlers = vm.$options[hook]  //  在$options里找对应的hook属性
+  var handlers = vm.$options[hook]  //  在$options里找对应的hook属性，hook对应于$options里的属性
   if (handlers) { // 是个数组，遍历，依次执行
     for (var i = 0, j = handlers.length; i < j; i++) {
       handlers[i].call(vm)
@@ -1933,15 +1934,15 @@ function createComponent (
   }
 
   // async component
-  // Ctor.cid  Ctor.resolved
-  if (!Ctor.cid) { // 说明传入的Ctor是一个普通函数
+  // Ctor.cid  Ctor.resolved ？
+  if (!Ctor.cid) { 
     if (Ctor.resolved) {
       Ctor = Ctor.resolved
     } else {
       Ctor = resolveAsyncComponent(Ctor, function () {
         // it's ok to queue this on every render because
         // $forceUpdate is buffered by the scheduler.
-        context.$forceUpdate()
+        context.$forceUpdate() // context is a vm?
       })
       if (!Ctor) {
         // return nothing if this is indeed an async component
@@ -2125,12 +2126,13 @@ function resolveAsyncComponent (
     return factory.resolved
   }
 }
-
+/*
+ * 
+ */
 function extractProps (data, Ctor) {
   // we are only extrating raw values here.
   // validation and default values are handled in the child
   // component itself.
-  // 这里只是把props抽离出来，验证props和求值在子组件中处理
   var propOptions = Ctor.options.props
   if (!propOptions) {
     return
@@ -2149,13 +2151,19 @@ function extractProps (data, Ctor) {
   }
   return res
 }
-
+/*
+ * 函数的作用是
+ * 提供一个key或者altkey
+ * 首先检查hash中是否有key或者altkey属性，都没有就返回false
+ * 如果有的话，给res[key]，返回true.
+ * 然后根据preserve决定是否在hash中保留
+ */
 function checkProp (
   res,
   hash,
   key,
-  altKey,
-  preserve
+  altKey, // 替代key，替身？
+  preserve // 是否在hash中保留 如果为false,则使用 delete方法 删除key属性
 ) {
   if (hash) {
     if (hasOwn(hash, key)) {
@@ -2174,7 +2182,13 @@ function checkProp (
   }
   return false
 }
-
+/*
+ * 设置data.hook
+ * 从 data.hook 和 hooks中提取hook函数
+ * var hooks = { init: init, prepatch: prepatch, insert: insert, destroy: destroy }
+ * 合并至data.hook
+ * 只是用于合并生命周期相关的hooks
+ */
 function mergeHooks (data) {
   if (!data.hook) {
     data.hook = {}
