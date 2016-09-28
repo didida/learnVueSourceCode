@@ -2079,9 +2079,11 @@ function destroy (vnode) {
     }
   }
 }
-
-function resolveAsyncComponent (
-  factory,
+/*
+ * 
+ */
+function resolveAsyncComponent ( // ????
+  factory, // 传入的是一个Ctor
   cb
 ) {
   if (factory.requested) {
@@ -2127,7 +2129,12 @@ function resolveAsyncComponent (
   }
 }
 /*
- * 
+ * Ctor 要么是Vue，要么是Sub 
+ * 函数的作用是
+ * 首先获得Ctor.options.props，以及data.attrs,data.props,data.domProps
+ * 简单点说，就是拷贝props中的属性在data.attrs,props,domprops中的属性值
+ * 到一个对象res中
+ * 是从data中抽离出属性，只是抽离的属性必须是Ctor.options.props中存在的
  */
 function extractProps (data, Ctor) {
   // we are only extrating raw values here.
@@ -2750,8 +2757,11 @@ if ("development" !== 'production') {
 
 /**
  * Helper that recursively merges two data objects together.
+ * 合并规则：
+ * 1. 如果from中的某个属性to中有，保留to中的，什么都不做
+ * 2. 如果to中和from中的某个属性值都是对象，递归调用。
  */
-function mergeData (to, from) {  // 递归合并两个对象
+function mergeData (to, from) { 
   var key, toVal, fromVal
   for (key in from) {
     toVal = to[key]
@@ -2920,7 +2930,7 @@ var defaultStrat = function (parentVal, childVal) {
  *   component1: Vue.extend(obj1),
  *   component2: Vue.extend(obj2)
  * }
- * 
+ * 如果options中对应的属性值为object, 将它变成一个构造器。
  */
 function normalizeComponents (options) {
   if (options.components) {
@@ -2928,7 +2938,7 @@ function normalizeComponents (options) {
     var def
     for (var key in components) { //  遍历每一个选项
       var lower = key.toLowerCase() // 属性名小写
-      if (isBuiltInTag(lower) || config.isReservedTag(lower)) {  //  如果是内建的tag 
+      if (isBuiltInTag(lower) || config.isReservedTag(lower)) {  //  如果是内建的tag或者<component>,<slot>
         // 或者是 slot component  报错
         "development" !== 'production' && warn(
           'Do not use built-in or reserved HTML elements as component ' +
@@ -2972,7 +2982,7 @@ function normalizeComponents (options) {
  *   }
  * }
  */
-function normalizeProps (options) {
+function normalizeProps (options) { // 统一变成一个对象形式，并赋值给options.props
   var props = options.props
   if (!props) return
   var res = {}
@@ -3002,7 +3012,7 @@ function normalizeProps (options) {
       name = camelize(key) 
       res[name] = isPlainObject(val)   // 如果val是对象 保持不变
         ? val 
-        : { type: val } // 否则还是变成一个对象的形式
+        : { type: val } // 如果val不是对象，那就是字符串，说明所需要的type
     }
   }
   options.props = res  // 设置res为新的props
@@ -3026,7 +3036,7 @@ function normalizeDirectives (options) {  // 标准化指令选项
   var dirs = options.directives
   if (dirs) {
     for (var key in dirs) {  // 遍历指令选项
-      var def = dirs[key] 
+      var def = dirs[key]  // def: Object/Function
       if (typeof def === 'function') { // 如果是一个函数
         dirs[key] = { bind: def, update: def } // 给 bind 和 update都调用这个函数,unbind 不设置
       }
@@ -3043,9 +3053,11 @@ function mergeOptions (
   child, // child的选项?
   vm
 ) {
+  // normaoize child的options.components,options.props,options.directives
   normalizeComponents(child)
   normalizeProps(child)
   normalizeDirectives(child)
+
   var extendsFrom = child.extends // child的extends选项
 
   if (extendsFrom) {
@@ -3119,19 +3131,19 @@ function resolveAsset (
  * 如果存在，直接返回propsData[key]
  */
 function validateProp ( 
-  key,  
+  key, // 要验证的prop中的key 
   propOptions, 
-  propsData,
+  propsData, // required
   vm
 ) {
   /* istanbul ignore if */
   if (!propsData) return
   var prop = propOptions[key] // propOption 是 options.props，获得属性key对应的选项
-  var absent = !hasOwn(propsData, key) //  propsData中是否提供了propsData
+  var absent = !hasOwn(propsData, key) //  propsData中没有key属性，返回true
   var value = propsData[key]  // 可能存在，也可能不存在
   // handle boolean props
   if (getType(prop.type) === 'Boolean') {  // 如果prop应该返回一个布尔值
-    if (absent && !hasOwn(prop, 'default')) {  // 如果propsData中不存在且prop对象中没有default属性
+    if (absent && !hasOwn(prop, 'default')) {  // 如果propsData没有key属性且prop对象中没有default属性
       value = false  //  默认值为false
     } else if (value === '' || value === hyphenate(key)) {  
       //如果propsData中提供了key属性，且值是空字符串或者key的连字符格式
@@ -3156,6 +3168,9 @@ function validateProp (
 
 /**
  * Get the default value of a prop.
+ * prop: {
+ *   default: ...,
+ * }
  */
 function getPropDefaultValue (vm, prop, name) { // for example: prop = props.prop1
   // no default, return undefined
@@ -3173,20 +3188,29 @@ function getPropDefaultValue (vm, prop, name) { // for example: prop = props.pro
     )
   }
   // call factory function for non-Function types
-  return typeof def === 'function' && prop.type !== Function  // def是一个函数而且prop事先声明是一个函数 ? 不应该是个字符串？
-    ? def.call(vm) // 否则执行def函数
-    : def  // 直接返回一个原始值
+  return typeof def === 'function' && prop.type !== Function  // def是一个函数而且prop.type不是函数，那么就要执行这个函数
+    // 并返回一个值
+    ? def.call(vm) //
+    : def  // 直接返回def
 }
 
 /**
  * Assert whether a prop is valid.  判断一个prop是否有效
+ * prop: {
+ *   required: ...,
+ *   type: ...,
+ *   validator: Function
+ * }
+ * name 只是用于报错信息
+ * value是要验证的值
+ * 
  */
 function assertProp (
   prop,
   name,
   value,
   vm,
-  absent
+  absent // 
 ) {
   if (prop.required && absent) { // 如果在prop中定义了required但是prop中没有
     warn(
@@ -3196,28 +3220,29 @@ function assertProp (
     return
   }
 
-  if (value == null && !prop.required) {  // value 为undefined 或者 不是必须
+  if (value == null && !prop.required) {  // value 为undefined 而且不是必须项，直接返回
     return
   }
   /**
    * type 可以是一个数组，只要满足数组中任一个指定的类型即满足条件
-   * type 为true ?????
+   * 
    */
   var type = prop.type // prop 的type属性
   var valid = !type || type === true  // type不存在 或者 type 为true时 valid都为true
   var expectedTypes = []  // 
   if (type) {
-    if (!Array.isArray(type)) { // 如果type不是一个数组，那是什么，字符串？
-      type = [type] // type 变成一个数组
+    if (!Array.isArray(type)) { // 如果type不是一个数组
+      type = [type] // type变成一个数组形式
     }
+    // 如果type是一个数组，遍历它
     for (var i = 0; i < type.length && !valid; i++) {  // 一旦type 变为 true,结束循环
-      var assertedType = assertType(value, type[i])
+      var assertedType = assertType(value, type[i]) // a object {expectedType,valid}
       expectedTypes.push(assertedType.expectedType)
       valid = assertedType.valid
     }
   }
 
-  if (!valid) {  // 如果无效则报错
+  if (!valid) {  // 如果遍历完数组还是无效，报错并·返回
     warn(
       'Invalid prop: type check failed for prop "' + name + '".' +
       ' Expected ' + expectedTypes.map(capitalize).join(', ') +
@@ -3239,12 +3264,14 @@ function assertProp (
 }
 
 /**
- * Assert the type of a value  // 判断一个值的类型
+ * Assert the type of a value
+ * 函数的作用是返回一个对象，包含valid,expectedType等信息
+ * 
  */
-function assertType (value, type) {  // type 是构造函数的函数名
+function assertType (value, type) {  // 传入的type是什么? 字符串
   var valid
   var expectedType = getType(type)
-  if (expectedType === 'String') {
+  if (expectedType === 'String') { // 
     valid = typeof value === (expectedType = 'string')
   } else if (expectedType === 'Number') {
     valid = typeof value === (expectedType = 'number')
@@ -3269,6 +3296,8 @@ function assertType (value, type) {  // type 是构造函数的函数名
  * Use function string name to check built-in types,
  * because a simple equality check will fail when running
  * across different vms / iframes.
+ * 函数的作用是
+ * 用正则表达式来匹配函数名，来检查内置类型。
  */
 function getType (fn) {
   var match = fn && fn.toString().match(/^\s*function (\w+)/)  //  函数名来检查内建类型
@@ -3276,7 +3305,9 @@ function getType (fn) {
 }
 
 
-
+/*
+ * 放置一些util函数
+ */
 var util = Object.freeze({
 	defineReactive: defineReactive,
 	_toString: _toString,
@@ -3315,9 +3346,11 @@ var util = Object.freeze({
 	validateProp: validateProp
 });
 
-/*  */
+/*
+ * 初始化init
+ */
 
-function initUse (Vue) {  //  应用插件
+function initUse (Vue) {  //  
   Vue.use = function (plugin) {
     /* istanbul ignore if */
     if (plugin.installed) {
@@ -3338,13 +3371,15 @@ function initUse (Vue) {  //  应用插件
 
 /*  */
 
-function initMixin$1 (Vue) {
+function initMixin$1 (Vue) { // 初始化Mixin
   Vue.mixin = function (mixin) {
-    Vue.options = mergeOptions(Vue.options, mixin)
+    Vue.options = mergeOptions(Vue.options, mixin)  // 充实一下options而已
   }
 }
 
-/*  */
+/*  
+ * 初始化一个Vue.extend方法
+ */
 
 function initExtend (Vue) {
   /**
@@ -3360,14 +3395,14 @@ function initExtend (Vue) {
    */
   Vue.extend = function (extendOptions) {
     extendOptions = extendOptions || {}
-    var Super = this
+    var Super = this // 指向Vue构造函数
     var isFirstExtend = Super.cid === 0
     if (isFirstExtend && extendOptions._Ctor) {
       return extendOptions._Ctor
     }
-    var name = extendOptions.name || Super.options.name
+    var name = extendOptions.name || Super.options.name // 传入的对象中是否有name属性
     if ("development" !== 'production') {
-      if (!/^[a-zA-Z][\w-]*$/.test(name)) {
+      if (!/^[a-zA-Z][\w-]*$/.test(name)) { // 命名必须以英文字母开头，只能包含字母数字或者连字符
         warn(
           'Invalid component name: "' + name + '". Component names ' +
           'can only contain alphanumeric characaters and the hyphen.'
@@ -3376,23 +3411,23 @@ function initExtend (Vue) {
       }
     }
     var Sub = function VueComponent (options) {
-      this._init(options)
+      this._init(options) // 由于原型委托，可以使用Super，也就是Vue构造函数原型上的所有方法。
     }
     Sub.prototype = Object.create(Super.prototype) //  原型委托
     Sub.prototype.constructor = Sub
-    Sub.cid = cid++
-    Sub.options = mergeOptions(
+    Sub.cid = cid++ // 对不同的组件构造器加以区别
+    Sub.options = mergeOptions( // 合并Vue的option对象和传入的options对象
       Super.options,
       extendOptions
     )
-    Sub['super'] = Super
+    Sub['super'] = Super // 设置一个Super属性
     // allow further extension
-    Sub.extend = Super.extend
+    Sub.extend = Super.extend // Vue.extend({}).extend({})... 有效
     // create asset registers, so extended classes
     // can have their private assets too.
     config._assetTypes.forEach(function (type) {
       Sub[type] = Super[type]
-    })
+    }) // 同样可以注册component，directive,filter
     // enable recursive self-lookup
     if (name) {
       Sub.options.components[name] = Sub
@@ -3400,11 +3435,11 @@ function initExtend (Vue) {
     // keep a reference to the super options at extension time.
     // later at instantiation we can check if Super's options have
     // been updated.
-    Sub.superOptions = Super.options
-    Sub.extendOptions = extendOptions
+    Sub.superOptions = Super.options // 定义一个superOptions指向Vue.options
+    Sub.extendOptions = extendOptions // 缓存这个组件构造器传入的options
     // cache constructor
-    if (isFirstExtend) {
-      extendOptions._Ctor = Sub
+    if (isFirstExtend) { // ? a question why Super.cid === 0
+      extendOptions._Ctor = Sub // 在extendOptions中缓存Sub
     }
     return Sub
   }
@@ -3415,32 +3450,38 @@ function initExtend (Vue) {
 function initAssetRegisters (Vue) {
   /**
    * Create asset registration methods.
+   * Vue.component,Vue.filter,Vue.directive
+   * 注册组件，注册过滤器，注册指令
    */
-  config._assetTypes.forEach(function (type) {
+  config._assetTypes.forEach(function (type) { // ['component', 'directive', 'filter']
     Vue[type] = function (
-      id,
-      definition
+      id, // name
+      definition // object
     ) {
-      if (!definition) {
-        return this.options[type + 's'][id]
+      if (!definition) { 
+        return this.options[type + 's'][id] // 根据id在vm.options[type+'s']中去找
       } else {
         /* istanbul ignore if */
         if ("development" !== 'production') {
-          if (type === 'component' && config.isReservedTag(id)) {
+          if (type === 'component' && config.isReservedTag(id)) { // 不要使用原生html标签来注册组件
             warn(
               'Do not use built-in or reserved HTML elements as component ' +
               'id: ' + id
             )
           }
         }
-        if (type === 'component' && isPlainObject(definition)) {
-          definition.name = definition.name || id
-          definition = Vue.extend(definition)
+        if (type === 'component' && isPlainObject(definition)) { // 如果是注册组件
+          definition.name = definition.name || id // 如果defination中提供了name，用提供的name，否则用id
+          definition = Vue.extend(definition) // 返回一个构造器
         }
-        if (type === 'directive' && typeof definition === 'function') {
+        if (type === 'directive' && typeof definition === 'function') {  // 如果是注册指令，而且defination是函数
+          // 将defintion 变成对象形式，默认提供bind和update
           definition = { bind: definition, update: definition }
         }
-        this.options[type + 's'][id] = definition
+        this.options[type + 's'][id] = definition // 在this.options[type + 's']里保存这个definition
+        // 如果是注册component,返回一个Sub构造函数
+        // 如果是注册directive,返回一个对象
+        // 如果是注册filter，。。。，不好意思，没有filter了
         return definition
       }
     }
@@ -3486,8 +3527,9 @@ var builtInComponents = {
   KeepAlive: KeepAlive
 }
 
-/*  */
-
+/*
+ * 初始话全局API
+ */
 function initGlobalAPI (Vue) { 
   // config
   var configDef = {}
@@ -3499,18 +3541,24 @@ function initGlobalAPI (Vue) {
       )
     }
   }
-  Object.defineProperty(Vue, 'config', configDef)
+  Object.defineProperty(Vue, 'config', configDef) // Vue.config = configDef
   Vue.util = util
   Vue.set = set
   Vue.delete = del
   Vue.nextTick = nextTick
-
+  /*
+   * Vue.options = {
+   *    components: {},
+   *    directives: {},
+   *    filters: {} 
+   * }
+   */
   Vue.options = Object.create(null)
-  config._assetTypes.forEach(function (type) {
-    Vue.options[type + 's'] = Object.create(null)
+  config._assetTypes.forEach(function (type) { // ['component', 'directive', 'filter']
+    Vue.options[type + 's'] = Object.create(null) // 存储已经注册的组件，指令，过滤器等等
   })
 
-  extend(Vue.options.components, builtInComponents)
+  extend(Vue.options.components, builtInComponents) // builtInComponents: {KeepAlive: KeepAlive}
 
   initUse(Vue)
   initMixin$1(Vue)
@@ -3522,7 +3570,7 @@ initGlobalAPI(Vue)
 
 Object.defineProperty(Vue.prototype, '$isServer', {
   get: function () { return config._isServer; }
-})
+}) // Vue.prototype[$isServer] === config._isServer
 
 Vue.version = '2.0.0-rc.6'
 
@@ -3568,13 +3616,14 @@ var getXlinkProp = function (name) { // 从第六位开始取
   return isXlink(name) ? name.slice(6, name.length) : ''
 }
 
-var isFalsyAttrValue = function (val) {
+var isFalsyAttrValue = function (val) { // val是一个假值
   return val == null || val === false
 }
 
 /* 
+ * 开始处理 class 
  * 合并一个结点的父节点，子节点的所有class 最终返回一个以空格分隔的字符串，
- * class 包括 staticClass 和 class
+ * class 包括 staticClass 和 动态class
  */
 
 function genClassForVnode (vnode) { // 收集一个组件的父组件和子组件的所有class
@@ -3598,6 +3647,7 @@ function genClassForVnode (vnode) { // 收集一个组件的父组件和子组�
       data = mergeClassData(data, parentNode.data)
     }
   }
+  // data此时是一个对象，包含staticClass和class两个属性
   return genClassFromData(data)  // 返回一个字符串
 }
 
@@ -3606,7 +3656,7 @@ function genClassForVnode (vnode) { // 收集一个组件的父组件和子组�
  */
 function mergeClassData (child, parent) { 
   return {
-    staticClass: concat(child.staticClass, parent.staticClass), // 合并子节点和父节点的static class
+    staticClass: concat(child.staticClass, parent.staticClass), // 子节点的在前，父节点的在后，static已经是一个字符串了
     class: child.class
       ? [child.class, parent.class]
       : parent.class
@@ -3617,10 +3667,10 @@ function genClassFromData (data) { // data: Object
   var dynamicClass = data.class // 动态class
   var staticClass = data.staticClass // 静态class 
   if (staticClass || dynamicClass) { // 有一个存在即可
-    return concat(staticClass, stringifyClass(dynamicClass))
+    return concat(staticClass, stringifyClass(dynamicClass)) // 静态class在前，动态class在后
   }
   /* istanbul ignore next */
-  return ''
+  return '' // 两个都不存在，返回一个空字符串
 }
 
 function concat (a, b) { // 返回 'a b'的形式
@@ -3630,12 +3680,12 @@ function concat (a, b) { // 返回 'a b'的形式
 function stringifyClass (value) { // value: String | Array | Object
   var res = ''
   if (!value) {
-    return res
+    return res // value不存在，返回空字符串
   }
   if (typeof value === 'string') {
-    return value
+    return value // 是字符串的话，原样返回
   }
-  if (Array.isArray(value)) {
+  if (Array.isArray(value)) { // 如果是数组，
     var stringified
     for (var i = 0, l = value.length; i < l; i++) {
       if (value[i]) {
@@ -3648,7 +3698,7 @@ function stringifyClass (value) { // value: String | Array | Object
   }
   if (isObject(value)) {
     for (var key in value) {
-      if (value[key]) res += key + ' ' // 只要key 和value[key]无关
+      if (value[key]) res += key + ' ' // 只要key，和value[key]无关
     }
     return res.slice(0, -1)
   }
@@ -3656,7 +3706,9 @@ function stringifyClass (value) { // value: String | Array | Object
   return res
 }
 
-/*  */
+/*
+ * 处理html相关
+ */
 
 var namespaceMap = {
   svg: 'http://www.w3.org/2000/svg',
@@ -3729,6 +3781,9 @@ function getTagNamespace (tag) {  //  返回 svg 或 math
 }
 
 var unknownElementCache = Object.create(null) // 一个空对象,缓存已处理过的tag
+/*
+ * 是否是未知元素
+ */
 function isUnknownElement (tag) { // 是否是未知标签
   /* istanbul ignore if */
   if (!inBrowser) { //inBrowser : Boolean
@@ -3779,7 +3834,8 @@ function query (el) { // el: String
 }
 
 /*
- * 变成全局韩式
+ * 定义一些dom相关函数
+ * 并且都放入nodeOps对象中
  */
 
 function createElement$1 (tagName) {
@@ -3852,7 +3908,7 @@ var nodeOps = Object.freeze({  // 定义了一个nodeOps对象，封装了一些
 });
 
 /*
- * 
+ * v-ref?？？ some questions
  */
 
 var ref = { 
@@ -3861,8 +3917,8 @@ var ref = {
   },
   update: function update (oldVnode, vnode) {
     if (oldVnode.data.ref !== vnode.data.ref) {
-      registerRef(oldVnode, true)
-      registerRef(vnode)
+      registerRef(oldVnode, true) // 移除旧的
+      registerRef(vnode) // 重新注册新的
     }
   },
   destroy: function destroy (vnode) {
@@ -3877,14 +3933,14 @@ function registerRef (vnode, isRemoval) {  // ???
   var vm = vnode.context
   var ref = vnode.child || vnode.elm // wtf elm
   var refs = vm.$refs  // vm.$refs 包含注册有v-ref的函数
-  if (isRemoval) {
+  if (isRemoval) { // 处理remove逻辑
     if (Array.isArray(refs[key])) {
       remove(refs[key], ref)
     } else if (refs[key] === ref) {
       refs[key] = undefined
     }
   } else {
-    if (vnode.data.refInFor) {
+    if (vnode.data.refInFor) { // 处理添加逻辑
       if (Array.isArray(refs[key])) {
         refs[key].push(ref)
       } else {
@@ -3910,15 +3966,19 @@ function registerRef (vnode, isRemoval) {  // ???
  * of making flow understand it is not worth it.
  */
 
+/*
+ * vdom diff 算法
+ */
+
 var emptyData = {}
 var emptyNode = new VNode('', emptyData, [])
 var hooks$1 = ['create', 'update', 'postpatch', 'remove', 'destroy'] // 生命周期钩子
 
-function isUndef (s) {
+function isUndef (s) { 
   return s == null
 }
 
-function isDef (s) {
+function isDef (s) { 
   return s != null
 }
 
@@ -3946,8 +4006,8 @@ function createKeyToOldIdx (children, beginIdx, endIdx) { // child: Array
   return map
 }
 
-function createPatchFunction (backend) { // 一个对象 ??? 作用？
-  var i, j
+function createPatchFunction (backend) { // ???
+  var i, j 
   var cbs = {}
   /*
    * modules: [
@@ -4438,7 +4498,10 @@ function createPatchFunction (backend) { // 一个对象 ??? 作用？
   }
 }
 
-/*  */
+/*
+ * directives
+ * 
+ */
 
 var directives = {
   create: function bindDirectives (oldVnode, vnode) {
@@ -4473,7 +4536,7 @@ var directives = {
 
 var emptyModifiers = Object.create(null)
 
-function forEachDirective (
+function forEachDirective ( // 遍历directive
   oldVnode,
   vnode,
   fn
@@ -4483,6 +4546,7 @@ function forEachDirective (
     for (var i = 0; i < dirs.length; i++) {  // 遍历数组
       var dir = dirs[i] 
       var def = resolveAsset(vnode.context.$options, 'directives', dir.name, true) // options.type.id
+      // 简单点说就是 vnode.context.$options[directives][dir.name]
       if (def) {
         var oldDirs = oldVnode && oldVnode.data.directives
         if (oldDirs) {
@@ -4519,14 +4583,16 @@ var baseModules = [
   directives
 ]
 
-/*  */
+/* 
+ * 
+ */
 
 function updateAttrs (oldVnode, vnode) {
-  if (!oldVnode.data.attrs && !vnode.data.attrs) {
+  if (!oldVnode.data.attrs && !vnode.data.attrs) {  // 同时都没有 返回 什么都不做
     return
   }
   var key, cur, old
-  var elm = vnode.elm // ?
+  var elm = vnode.elm 
   var oldAttrs = oldVnode.data.attrs || {} 
   var attrs = vnode.data.attrs || {}
   // clone observed objects, as the user probably wants to mutate it
