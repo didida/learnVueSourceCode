@@ -526,7 +526,7 @@ if ("development" !== 'production') {
   // 
   initProxy = function initProxy (vm) {
     if (hasProxy) {
-      vm._renderProxy = new Proxy(vm, proxyHandlers)
+      vm._renderProxy = new Proxy(vm, proxyHandlers) // 
     } else {
       vm._renderProxy = vm // 如果没有 什么都不做
     }
@@ -1230,8 +1230,12 @@ function del (obj, key) {
   ob.dep.notify()
 }
 //*****************************************************************************************************************************
-/*  */
-// 设置vm的初始状态
+/*
+ * 初始化state
+ * 包括 props, data, computed, methods, watch
+ * 同时vm添加一个_watchers的内部属性
+ */
+
 function initState (vm) {
   vm._watchers = []
   initProps(vm)
@@ -1241,24 +1245,27 @@ function initState (vm) {
   initWatch(vm)
 }
 
-function initProps (vm) {   // 初始化 props 选项
-  var props = vm.$options.props   // props
-  var propsData = vm.$options.propsData   // propsData
-  if (props) {  // 如果没有props选项，函数直接结束
+/*
+ * 初始化props
+ */
+function initProps (vm) {   
+  var props = vm.$options.props   】
+  var propsData = vm.$options.propsData
+  if (props) {
 
-    var keys = vm.$options._propKeys = Object.keys(props) // 获得props的所有属性，同时将这个数字赋值给vm.$options._propKeys
-    var isRoot = !vm.$parent   // 如果vm有父组件，当然它就不是根组件
+    var keys = vm.$options._propKeys = Object.keys(props) // 获得props的所有属性数组，同时vm.$options上增加一个_propKeys属性
+    var isRoot = !vm.$parent
 
-    // root instance props should be converted  ？？？？？ 根实例的props应该转变
-    observerState.shouldConvert = isRoot // line 1001
+    // root instance props should be converted
+    // 根实例上的props应该全部转化为响应式的
+    observerState.shouldConvert = isRoot 
     var loop = function ( i ) {
-      var key = keys[i] // props 上的每一个属性名
+      var key = keys[i] 
       /* istanbul ignore else */  // ？
       if ("development" !== 'production') {
-        //  这个函数的作用？
-        //  props对应的每一个key都变成了vm上的直接属性，同时验证这些key值，返回一个value(如果有效的话)，并且提供一个自定义的setter
-        //  并且将每一个属性都变成响应式的属性,而且每一个属性都在vm上
-        defineReactive(vm, key, validateProp(key, props, propsData, vm), function () {  // 对象  属性 值 setter
+        //  props对应的每一个key都变成了vm上响应式的直接属性，同时验证这些key值，返回一个value(如果有效的话)，并且提供一个自定义的setter
+        //  
+        defineReactive(vm, key, validateProp(key, props, propsData, vm), function () {  // 对象  属性 值 自定义的setter
           //  key是props对象的key，validateProp返回一个value
           if (vm.$parent && !observerState.isSettingProps) {
             warn(
@@ -1272,18 +1279,28 @@ function initProps (vm) {   // 初始化 props 选项
         })
       } else {}
     };
-
+    // 遍历props属性数组，将props上的每一个属性都变成响应式的
     for (var i = 0; i < keys.length; i++) loop( i );
     observerState.shouldConvert = true
   }
 }
 
-function initData (vm) {  //  got
+/*
+ * 初始化data
+ * data如果是一个函数，执行这个函数，返回一个data对象
+ * 函数的作用
+ * 1. props中有的属性，data中就不能再出现了
+ * 2. 使用proxy函数处理vm
+ *    也就是 data中的每一个属性都变成了vm的属性，同时在set和get vm[key]是，操作都是在vm._data上进行的
+ *    vm._data来自初始化定义的data
+ *    这也就解释了后来添加到data上的属性不能变成响应式的
+ */
+function initData (vm) {
   var data = vm.$options.data
-  data = vm._data = typeof data === 'function'  // 如果data是个函数形式,这里给vm新添加一个属性_data
+  data = vm._data = typeof data === 'function'  // vm增加一个直接属性_data，注意，不是在vm.$options上添加
     ? data.call(vm)   // 执行data这个函数，返回一个对象
     : data || {}  // 如果不是函数，data为vm.$options.data,如果不存在，默认设置为一个空对象{}
-  if (!isPlainObject(data)) {  // 如果data不是一个对象，
+  if (!isPlainObject(data)) {  // 函数必须返回一个对象
     data = {}
     "development" !== 'production' && warn(
       'data functions should return an object.',
@@ -1292,11 +1309,11 @@ function initData (vm) {  //  got
   }
   // 得到data对象后，开始对它处理
   // proxy data on instance
-  var keys = Object.keys(data)  // 获得data的所有属性，
-  var props = vm.$options.props  // 获得vm的props
+  var keys = Object.keys(data)  // 获得data的属性数组
+  var props = vm.$options.props  // 获得props
   var i = keys.length 
   while (i--) {
-    if (props && hasOwn(props, keys[i])) {  // 如果data中的属性在props中也存在，报错。
+    if (props && hasOwn(props, keys[i])) {  // props中有的就不要再放在data中了
       "development" !== 'production' && warn(
         "The data property \"" + (keys[i]) + "\" is already declared as a prop. " +
         "Use prop default value instead.",
@@ -1304,28 +1321,33 @@ function initData (vm) {  //  got
       )
     } else {
       proxy(vm, keys[i])  
-      // 否则，如果没报错，用proxy方法处理data,结果就是data里的属性都成了vm的属性，并且get和set都直接在vm._data上操作
+      // 
     }
   }
   // observe data
-  observe(data) // 对data做了什么？ data获得了一个__ob__属性，指向一个observer实例，data上的每一个属性都变成响应式的
+  observe(data) // 
   data.__ob__ && data.__ob__.vmCount++ // 
 }
 
-var computedSharedDefinition = {
+var computedSharedDefinition = { // 属性修饰符
   enumerable: true,
   configurable: true,
-  get: noop,  // noop是什么都不做的函数
+  get: noop, 
   set: noop
 }
-//  初始化计算属性
+
+/*
+ * 初始化计算属性
+ * 计算属性的核心是添加依赖(dep)关系
+ * 
+ */
 
 function initComputed (vm) {
-  var computed = vm.$options.computed  //  得到computed对象
-  if (computed) {  // 如果存在的话，当然如果不存在 函数什么都不做
-    for (var key in computed) {
-      var userDef = computed[key]  // computed对象的属性值
-      // usrtDef可以是对象，也可以是个函数，如果是个对象，对象中有 get 和 set 函数
+  var computed = vm.$options.computed
+  if (computed) {  
+    for (var key in computed) { // 遍历computed对象
+      var userDef = computed[key]  
+      // usrtDef可以是对象，也可以是个函数，如果是个对象，对象中应该有 get 和 set 函数
       
       if (typeof userDef === 'function') { // 如果是函数
         computedSharedDefinition.get = makeComputedGetter(userDef, vm)   //??????
@@ -1449,10 +1471,14 @@ function stateMixin (Vue) {  //  ???????????????????????
     }
   }
 }
-
+/*
+ * 函数两个作用
+ * 1. 把key直接定义在了vm上
+ * 2. get和set都是在vm._data上操作，而_data只能记录初始化时的data,而不管data之后怎么更新
+ */
 function proxy (vm, key) {
   if (!isReserved(key)) {  //  key不是以 $或者_开头
-    Object.defineProperty(vm, key, {  // 把data的属性抽离出来，直接成为vm的顶级属性 
+    Object.defineProperty(vm, key, {  
       configurable: true,
       enumerable: true,
       get: function proxyGetter () {
@@ -1628,7 +1654,7 @@ function mergeVNodeHook (def, key, hook) {
   }
 }
 
-function updateListeners (   //  作用 ？？？
+function updateListeners ( 
   on,  //  对象
   oldOn, // 同样一个对象
   add,  // 要增加的监听函数
@@ -1703,6 +1729,11 @@ function fnInvoker (o) { // 传入一个对象，这个对象有fn属性，为�
 
 /*  
  * 初始化生命周期相关的一些属性 包括 parent,children,root,refs
+ * vm.$parent
+ * vm.$root
+ * vm.$children = []
+ * vm.$refs = {}
+ * 以及一些内部属性
  */
 
 var activeInstance = null
@@ -1895,7 +1926,10 @@ function lifecycleMixin (Vue) {
     }
   }
 }
-
+/*
+ * 遍历钩子函数，依次执行
+ * 同时vm.$emit方法触发钩子函数
+ */
 function callHook (vm, hook) {
   var handlers = vm.$options[hook]  //  在$options里找对应的hook属性，hook对应于$options里的属性
   if (handlers) { // 是个数组，遍历，依次执行
@@ -2449,7 +2483,7 @@ function renderMixin (Vue) {
     vnode,
     value,
     asProp) {
-    if (value) { //  如果value存在，必须是一个对象或者数组
+    if (value) { //  value必须是一个对象或者数组
       if (!isObject(value)) {
         "development" !== 'production' && warn(
           'v-bind without argument expects an Object or Array value',
@@ -2517,9 +2551,12 @@ function resolveSlots (
   return slots
 }
 
-/*  */
+/*
+ * 初始化事件
+ * 
+ */
 
-function initEvents (vm) { // 初始化事件
+function initEvents (vm) {
   vm._events = Object.create(null)    // 
   // init parent attached events
   var listeners = vm.$options._parentListeners // _parentListeners
@@ -2603,7 +2640,13 @@ function eventsMixin (Vue) {
 /*  */
 
 var uid = 0
-
+/*
+ * 初始化mixin，主要是在Vue.prototype上定义_init方法
+ * _init方法：在返回的实例上定义一系列属性
+ * 
+ * 
+ * 
+ */
 function initMixin (Vue) {  // 初始化各种Mixin
   Vue.prototype._init = function (options) {
     var vm = this   //  vm指向创建的Vue实例
@@ -2612,15 +2655,15 @@ function initMixin (Vue) {  // 初始化各种Mixin
     // a flag to avoid this being observed
     vm._isVue = true  // 表示是vue实例
     // merge options
-    if (options && options._isComponent) { // 如果options._isComponent存在
+    if (options && options._isComponent) { // options._isComponent属性
       // optimize internal component instantiation // 充分利用内部组件实例
       // since dynamic options merging is pretty slow, and none of the
       // internal component options needs special treatment.
       initInternalComponent(vm, options)  // 初始化内部组件
     } else {
-      vm.$options = mergeOptions( //
-        resolveConstructorOptions(vm), // 
-        options || {},
+      vm.$options = mergeOptions( // 初始化一个$options属性
+        resolveConstructorOptions(vm), // 总之把构造函数上的包括super(如果有的话)上的各种Options都薅过来了
+        options || {}, // 传入的options
         vm
       )
     }
@@ -2629,10 +2672,10 @@ function initMixin (Vue) {  // 初始化各种Mixin
       initProxy(vm) //
     } else {}
     // expose real self
-    vm._self = vm // vm_self ?
-    initLifecycle(vm)
-    initEvents(vm)
-    callHook(vm, 'beforeCreate')
+    vm._self = vm // 增加一个_self属性，指向自身
+    initLifecycle(vm) 
+    initEvents(vm)  // some questions
+    callHook(vm, 'beforeCreate') 
     initState(vm)
     callHook(vm, 'created')
     initRender(vm)
@@ -2653,7 +2696,10 @@ function initMixin (Vue) {  // 初始化各种Mixin
       opts.staticRenderFns = options.staticRenderFns
     }
   }
-
+  /*
+   * 来自构造函数（Vue或Sub）的options
+   * 
+   */
   function resolveConstructorOptions (vm) { //  返回一个options对象
     var Ctor = vm.constructor  // vm可能是Vue构造函数，也可能是Vue.extend()处理后返回的构造函数
 
@@ -2663,7 +2709,7 @@ function initMixin (Vue) {  // 初始化各种Mixin
       var cachedSuperOptions = Ctor.superOptions  // 同上
       if (superOptions !== cachedSuperOptions) {  
         // super option changed
-        Ctor.superOptions = superOptions
+        Ctor.superOptions = superOptions // 重新给Ctor.superOptions赋值
         options = Ctor.options = mergeOptions(superOptions, Ctor.extendOptions) 
         // Ctor.extendOptions 指的的使用Vue.extend()传入的options
         if (options.name) {
@@ -2700,17 +2746,23 @@ if ("development" !== 'production') {
       ))
     }
   }
-
-  formatComponentName = function (vm) {  // 用于格式化组件的名称
-    if (vm.$root === vm) { // 如果自身是根实例
+  // 格式化component name
+  // 如果是根实例
+  // 返回 root instance
+  // 如果vm是Vue实例，在vm.$options中找name或者_componentTag属性，否则找vm的name属性
+  // name如果不存在，返回 anonymous component
+  // 
+  formatComponentName = function (vm) {  
+    if (vm.$root === vm) { 
       return 'root instance' 
     }
-    var name = vm._isVue // 如果是Vue实例
-      ? vm.$options.name || vm.$options._componentTag // 有name选项那返回name值，没有的话就话就返回 _componentTag
+    var name = vm._isVue 
+      ? vm.$options.name || vm.$options._componentTag 
       : vm.name 
     return name ? ("component <" + name + ">") : "anonymous component"
   }
-
+  // 格式化 location
+  // 
   var formatLocation = function (str) {
     if (str === 'anonymous component') {
       str += " - use the \"name\" option for better debugging messages."
@@ -2758,8 +2810,9 @@ if ("development" !== 'production') {
 /**
  * Helper that recursively merges two data objects together.
  * 合并规则：
- * 1. 如果from中的某个属性to中有，保留to中的，什么都不做
- * 2. 如果to中和from中的某个属性值都是对象，递归调用。
+ * 1. 如果from中的某个属性to中有，保留to中的，什么都不做。
+ * 2. 如果to中没有，赋值。y
+ * 3. 如果to中和from中的某个属性值都是对象，递归调用。
  */
 function mergeData (to, from) { 
   var key, toVal, fromVal
@@ -2776,11 +2829,19 @@ function mergeData (to, from) {
 }
 
 /**
- * Data
+ * data的合并策略是
+ * 如果vm不存在
+ * 1. 如果childVal不存在 返回parentVal
+ * 2. 如果childVal不是一个函数，报错，返回parentVal
+ * 3. 如果parentVal不存在，返回childVal
+ * 4. 如果都存在，调用mergeData函数，合并parentVal和childVal函数的返回值,最终还是以childVal为主
+ *
+ * 如果vm存在，且parentVal和childVal至少一个存在时，返回一个函数
+ * 
  */
 strats.data = function (
-  parentVal,
-  childVal,
+  parentVal, // function
+  childVal, // function
   vm
 ) {
   if (!vm) {
@@ -2830,11 +2891,18 @@ strats.data = function (
 }
 
 /**
- * Hooks and param attributes are merged as arrays. 钩子函数和参数合并进一个数组
+ * Hooks and param attributes are merged as arrays.
+ * 合并策略：
+ * 1. 如果childVal不存在，直接返回parentVal
+ * 2. 如果childVal存在
+ *    1. 如果parentVal存在，返回一个合并后的数组，但是parentVal在前
+ *    2. 如果parentVal不存在，
+ *       1. 如果childVal是一个数组，直接返回childVal
+ *       2. 否则，把childVal包装成一个数组返回
  */
 function mergeHook (
-  parentVal,
-  childVal
+  parentVal, // Array
+  childVal // Array
 ) {
   return childVal
     ? parentVal // 如果 childVal存在
@@ -2844,20 +2912,23 @@ function mergeHook (
         : [childVal] // 包装成一个数组返回
     : parentVal  // 如果childVal 不存在 直接返回parentVal 
 }
-
+// strats中添加属性，属性名为生命周期各个钩子
 config._lifecycleHooks.forEach(function (hook) {
   strats[hook] = mergeHook
 })
 
 /**
- * Assets
+ * Assets // components,directives,filters
  *
  * When a vm is present (instance creation), we need to do
  * a three-way merge between constructor options, instance
  * options and parent options.
+ * 如果childVal不存在，返回一个原型为parentVal的空对象
+ * 如果childVal存在，合并parentVal和childVal
+ * 
  */
-function mergeAssets (parentVal, childVal) {
-  var res = Object.create(parentVal || null)
+function mergeAssets (parentVal, childVal) { // parentVal: Object childVal: Object
+  var res = Object.create(parentVal || null) // 原型委托
   return childVal
     ? extend(res, childVal)
     : res
@@ -2872,21 +2943,25 @@ config._assetTypes.forEach(function (type) {
  *
  * Watchers hashes should not overwrite one
  * another, so we merge them as arrays.
+ * 不应该重写（覆盖）,应该保存在一个数组里
+ * 合并策略
+ * 1. 如果
+ * 返回的是一个新对象
  */
-strats.watch = function (parentVal, childVal) {
+strats.watch = function (parentVal, childVal) { // parentVal: Object childVal: Object
   /* istanbul ignore if */
   if (!childVal) return parentVal
   if (!parentVal) return childVal
   var ret = {}
-  extend(ret, parentVal)
+  extend(ret, parentVal) // ret首先获得parentVal的全部属性
   for (var key in childVal) {
     var parent = ret[key]
     var child = childVal[key]
     if (parent && !Array.isArray(parent)) {
-      parent = [parent]
+      parent = [parent] // 如果parent不是一个数组，将其变成一个数组
     }
     ret[key] = parent
-      ? parent.concat(child)
+      ? parent.concat(child) // parent在前，child在后
       : [child]
   }
   return ret
@@ -2894,10 +2969,15 @@ strats.watch = function (parentVal, childVal) {
 
 /**
  * Other object hashes.
+ * 合并策略
+ * childVal和parentVal 有一个不存在，则返回另一个
+ * 如果都存在，依次extend parentVal和childVal
+ * 注意 这里是返回一个新对象
+ * 
  */
 strats.props =
 strats.methods =
-strats.computed = function (parentVal, childVal) {
+strats.computed = function (parentVal, childVal) { // parentVal: Object childVal: Object
   if (!childVal) return parentVal
   if (!parentVal) return childVal
   var ret = Object.create(null)
@@ -2911,6 +2991,7 @@ strats.computed = function (parentVal, childVal) {
  * 默认的合并策略
  * 子组件不存在，就用父组件的
  * 子组件存在，就用子组件自己的
+ * 以子组件为主
  */
 var defaultStrat = function (parentVal, childVal) {
   return childVal === undefined
@@ -4507,7 +4588,7 @@ var directives = {
   create: function bindDirectives (oldVnode, vnode) {
     var hasInsert = false
     forEachDirective(oldVnode, vnode, function (def, dir) {
-      callHook$1(def, dir, 'bind', vnode, oldVnode)
+      callHook$1(def, dir, 'bind', vnode, oldVnode) // 依次执行钩子函数
       if (def.inserted) {
         hasInsert = true
       }
@@ -4535,7 +4616,14 @@ var directives = {
 }
 
 var emptyModifiers = Object.create(null)
-
+/*
+ * 函数的作用是 
+ * 1. 获得vnode.data.directives 然后依次遍历
+ * 2. 对于每一个dir,通过resolveAsset函数获得def
+ * 3. dir.oldValue被赋值
+ * 4. dir.modifiers如果不存在，赋值一个空对象
+ * 5. def和dir作为参数传入函数fn中
+ */
 function forEachDirective ( // 遍历directive
   oldVnode,
   vnode,
@@ -4546,14 +4634,14 @@ function forEachDirective ( // 遍历directive
     for (var i = 0; i < dirs.length; i++) {  // 遍历数组
       var dir = dirs[i] 
       var def = resolveAsset(vnode.context.$options, 'directives', dir.name, true) // options.type.id
-      // 简单点说就是 vnode.context.$options[directives][dir.name]
+      // 简单点说就是 vnode.context.$options[directives][dir.name]，
       if (def) {
         var oldDirs = oldVnode && oldVnode.data.directives
         if (oldDirs) {
-          dir.oldValue = oldDirs[i].value
-        }
+          dir.oldValue = oldDirs[i].value // 赋值给dir.oldValue
+        } 
         if (!dir.modifiers) {
-          dir.modifiers = emptyModifiers
+          dir.modifiers = emptyModifiers // dir.modifiers 不存在 就赋值一个空对象
         }
         fn(def, dir)
       }
@@ -4570,7 +4658,9 @@ function applyDirectives (
     callHook$1(def, dir, hook, vnode, oldVnode)
   })
 }
-
+/*
+ * 在传入的def上找到对应的hook函数
+ */
 function callHook$1 (def, dir, hook, vnode, oldVnode) {
   var fn = def && def[hook]
   if (fn) {
@@ -4874,8 +4964,6 @@ function removeClass (el, cls) {
 /*
  * 处理渐变
  */
-
-
 var hasTransition = inBrowser && !isIE9 // 是否支持transition
 var TRANSITION = 'transition'
 var ANIMATION = 'animation'
@@ -5290,14 +5378,14 @@ var patch = createPatchFunction({ nodeOps: nodeOps, modules: modules })
  * 处理 v-model
  */
 
-var modelableTagRE = /^input|select|textarea|vue-component-[0-9]+(-[0-9a-zA-Z_\-]*)?$/
+var modelableTagRE = /^input|select|textarea|vue-component-[0-9]+(-[0-9a-zA-Z_\-]*)?$/ // vue-compoent-一个数字？
 
 /* istanbul ignore if */
 if (isIE9) {
   // http://www.matts411.com/post/internet-explorer-9-oninput/
   document.addEventListener('selectionchange', function () {
     var el = document.activeElement // 返回文档中当前获得焦点的元素
-    if (el && el.vmodel) {
+    if (el && el.vmodel) { // 如果绑定了v-model  el.vmodel: Boolean
       trigger(el, 'input')
     }
   })
@@ -5306,7 +5394,7 @@ if (isIE9) {
 var model = {
   bind: function bind (el, binding, vnode) {
     if ("development" !== 'production') {
-      if (!modelableTagRE.test(vnode.tag)) {
+      if (!modelableTagRE.test(vnode.tag)) { // 只能绑定在上述标签中
         warn(
           "v-model is not supported on element type: <" + (vnode.tag) + ">. " +
           'If you are working with contenteditable, it\'s recommended to ' +
@@ -5351,7 +5439,7 @@ var model = {
 function setSelected (el, binding, vm) { // vnode.context是一个vm
   var value = binding.value
   var isMultiple = el.multiple // el.multiple表示当前select可以多选
-  if (isMultiple && !Array.isArray(value)) {
+  if (isMultiple && !Array.isArray(value)) { // 如果是多选，那么value应该是一个数组
     "development" !== 'production' && warn(
       "<select multiple v-model=\"" + (binding.expression) + "\"> " +
       "expects an Array value for its binding, but got " + (Object.prototype.toString.call(value).slice(8, -1)),
@@ -5360,7 +5448,7 @@ function setSelected (el, binding, vm) { // vnode.context是一个vm
     return
   }
   var selected, option
-  for (var i = 0, l = el.options.length; i < l; i++) {
+  for (var i = 0, l = el.options.length; i < l; i++) { // el.options: Array ？
     option = el.options[i]
     if (isMultiple) {
       selected = value.indexOf(getValue(option)) > -1
@@ -5415,13 +5503,14 @@ function trigger (el, type) { // 触发事件
 
 // recursively search for possible transition defined inside the component root
 function locateNode (vnode) {
-  return vnode.child && (!vnode.data || !vnode.data.transition)
+  return vnode.child && (!vnode.data || !vnode.data.transition) 
+    // 如果vnode.child存在而且vnode.data或vnode.transition不存在
     ? locateNode(vnode.child._vnode)
-    : vnode
+    : vnode // 
 }
 
 var show = {
-  bind: function bind (el, ref, vnode) {
+  bind: function bind (el, ref, vnode) { // ref
     var value = ref.value;
 
     vnode = locateNode(vnode)
@@ -5482,10 +5571,12 @@ var transitionProps = {
 
 // in case the child is also an abstract component, e.g. <keep-alive>
 // we want to recrusively retrieve the real component to be rendered
+// real child
 function getRealChild (vnode) {
   var compOptions = vnode && vnode.componentOptions
   if (compOptions && compOptions.Ctor.options.abstract) {
     return getRealChild(getFirstComponentChild(compOptions.children))
+    // return children && children.filter(function (c) { return c && c.componentOptions; })[0]
   } else {
     return vnode
   }
@@ -5528,7 +5619,7 @@ var Transition = {
   render: function render (h) {
     var this$1 = this;
 
-    var children = this.$slots.default
+    var children = this.$slots.default //
     if (!children) {
       return
     }
@@ -5560,7 +5651,7 @@ var Transition = {
       )
     }
 
-    var rawChild = children[0]
+    var rawChild = children[0] 
 
     // if this is a component root node and the component's
     // parent container node also has transition, skip.
