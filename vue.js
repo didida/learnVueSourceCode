@@ -1240,7 +1240,7 @@ function initState (vm) {
   vm._watchers = []
   initProps(vm)
   initData(vm)
-  initComputed(vm)
+  initComputed(vm) // ?
   initMethods(vm)
   initWatch(vm)
 }
@@ -1384,13 +1384,15 @@ function makeComputedGetter (getter, owner) {  //  useDef:function
     return watcher.value // 返回watcher.value
   }
 }
-
-function initMethods (vm) {  // 初始化方法 got
-  var methods = vm.$options.methods  // 获得 methods对象
-  if (methods) { // 如果存在
-    for (var key in methods) {  // 遍历
+/*
+ * 将methods中定义的方法绑定到vm上
+ */
+function initMethods (vm) { 
+  var methods = vm.$options.methods  
+  if (methods) { 
+    for (var key in methods) {  
       if (methods[key] != null) {  
-        vm[key] = bind(methods[key], vm)  // methods的属性变成vm实例的属性
+        vm[key] = bind(methods[key], vm)  
       } else if ("development" !== 'production') {
         warn(("Method \"" + key + "\" is undefined in options."), vm)
       }
@@ -1398,20 +1400,21 @@ function initMethods (vm) {  // 初始化方法 got
   }
 }
 
-function initWatch (vm) {  // 初始化watch  got
+/*
+ * 监视对象 一个对象，键是观察表达式，值是对应回调。
+ * 值也可以是方法名，或者是对象，包含选项。在实例化时为每个键调用 $watch() 。
+ * 如果是字符串，那就是方法名
+ * 如果是对象，对象包括handler属性和deep属性
+ */
+function initWatch (vm) {  // 初始化watch
   var watch = vm.$options.watch  
-  // 监视对象 一个对象，键是观察表达式，值是对应回调。
-  // 值也可以是方法名，或者是对象，包含选项。在实例化时为每个键调用 $watch() 。
-  // 如果是字符串，那就是方法名
-  // 如果是对象，对象包括handler属性和deep属性
   
   if (watch) {
     for (var key in watch) {
       var handler = watch[key]  //  这里handler可能是对象，字符串，或是方法名
-      if (Array.isArray(handler)) {  // 如果是数组,遍历每一项,为每一项产生一个watcher
+      if (Array.isArray(handler)) {  // 如果是数组,遍历每一项
         for (var i = 0; i < handler.length; i++) {
-          createWatcher(vm, key, handler[i])  // 分别对应实例，属性名，处理函数
-          // 如果是数组，那么数组里的每一个元素都是一个handler。为每一个元素都创建一个watcher
+          createWatcher(vm, key, handler[i])  // 分别对应实例，属性名，处理函数，每一项都执行createWatcher方法
         }
       } else {
         createWatcher(vm, key, handler)  // 如果不是，直接createWatcher
@@ -1420,19 +1423,26 @@ function initWatch (vm) {  // 初始化watch  got
   }
 }
 
+/*
+ * 产生一个watcher
+ * 函数的作用是
+ * 如果传入的handler是一个对象，里面应该有一个handler属性
+ * 如果handler是一个对象字符串形式，那么在vm中去找，应该是在methods中定义过的函数
+ * 
+ */
 function createWatcher (vm, key, handler) {  // 产生一个watcher
   var options
   if (isPlainObject(handler)) {  // 如果handler是对象
     options = handler  
     handler = handler.handler  //  那么handler对象里必须要有handler属性
   }
-  if (typeof handler === 'string') {  // 此时值是方法名
-    handler = vm[handler]  // 必须是在methods里定义的方法
+  if (typeof handler === 'string') {  
+    handler = vm[handler]  
   }
-  vm.$watch(key, handler, options)  //  
+  vm.$watch(key, handler, options)  // 调用vm.$watch方法
 }
 
-function stateMixin (Vue) {  //  ??????????????????????? 
+function stateMixin (Vue) {   
   // flow somehow has problems with directly declared definition object
   // when using Object.defineProperty, so we have to procedurally build up
   // the object here.
@@ -1565,7 +1575,11 @@ function cloneVNodes (vnodes) {  //  批量复制
   return res  // 返回一个结点数组
 }
 
-/*  */
+/*
+ * 函数的作用
+ * 
+ * 返回一个子组件数组
+ */
 
 function normalizeChildren (  //   标准化子组件，
   children,  
@@ -2313,16 +2327,18 @@ function _createElement (
   }
 }
 
-/*  */
+/*
+ * 初始化render
+ */
 
 function initRender (vm) {
   vm.$vnode = null // the placeholder node in parent tree
   vm._vnode = null // the root of the child tree
   vm._staticTrees = null
-  vm.$slots = resolveSlots(vm.$options._renderChildren)
+  vm.$slots = resolveSlots(vm.$options._renderChildren) // 定义$slots属性
   // bind the public createElement fn to this instance
   // so that we get proper render context inside it.
-  vm.$createElement = bind(createElement, vm)
+  vm.$createElement = bind(createElement, vm) // 定义$createElement属性
   if (vm.$options.el) {
     vm.$mount(vm.$options.el)
   }
@@ -2428,12 +2444,18 @@ function renderMixin (Vue) {
 
   // filter resolution helper
   var identity = function (_) { return _; }
+  /*
+   * 返回this.$options[filters][id]
+   */
   Vue.prototype._f = function resolveFilter (id) {
     return resolveAsset(this.$options, 'filters', id, true) || identity
   }
 
   // render v-for
   // 列表渲染
+  // 根据val对应的三种类型的值，渲染list
+  // val 为传入的值，render为一个render函数
+  // 返回一个经过render函数处理过的数组
   Vue.prototype._l = function renderList (
     val,
     render
@@ -2479,6 +2501,7 @@ function renderMixin (Vue) {
   }
 
   // apply v-bind object
+  // 函数的作用
   Vue.prototype._b = function bindProps (
     vnode,
     value,
@@ -2490,20 +2513,19 @@ function renderMixin (Vue) {
           this
         )
       } else {
-        if (Array.isArray(value)) { // 如果是个数组，转化为对象
+        if (Array.isArray(value)) { 
           value = toObject(value) // 合并成一个对象
         }
         var data = vnode.data
         for (var key in value) {
-          // 如果key是class 或者 style。变成data的直接属性
+          // 如果key是class 或者 style，变成data的属性
           if (key === 'class' || key === 'style') {
-            data[key] = value[key]
+            data[key] = value[key] // 在data中添加属性
           } else {
-          // 否则 变成data.domProps 或者 data.attrs的属性
             var hash = asProp || config.mustUseProp(key) // 
               ? data.domProps || (data.domProps = {}) // data.domProps？
               : data.attrs || (data.attrs = {}) //data.attrs
-            hash[key] = value[key]
+            hash[key] = value[key] // 在data.attrs 或 data.domProps中添加属性
           }
         }
       }
@@ -2516,7 +2538,10 @@ function renderMixin (Vue) {
     return config.keyCodes[key]
   }
 }
-
+/*
+ * 函数的作用
+ * 返回一个slots对象
+ */
 function resolveSlots (
   renderChildren
 ) {
@@ -2682,8 +2707,9 @@ function initMixin (Vue) {  // 初始化各种Mixin
   }
 
   function initInternalComponent (vm, options) { // 初始化vm.$options 添加了一些属性
-    var opts = vm.$options = Object.create(resolveConstructorOptions(vm)) 
+    var opts = vm.$options = Object.create(resolveConstructorOptions(vm)) // 原型委托在返回的options对象上
     // doing this because it's faster than dynamic enumeration.
+    // 定义一些属性
     opts.parent = options.parent
     opts.propsData = options.propsData
     opts._parentVnode = options._parentVnode
@@ -5908,6 +5934,7 @@ setTimeout(function () {
 /*  */
 
 // check whether current browser encodes a char inside attribute values
+// 检查当前浏览器能否编码属性值里面的字符
 function shouldDecode (content, encoded) {
   var div = document.createElement('div')
   div.innerHTML = "<div a=\"" + content + "\">"
@@ -5917,18 +5944,24 @@ function shouldDecode (content, encoded) {
 // According to
 // https://w3c.github.io/DOM-Parsing/#dfn-serializing-an-attribute-value
 // when serializing innerHTML, <, >, ", & should be encoded as entities.
+// 当序列化innerHTML时，<, >, ", &, 都应该被编码
 // However, only some browsers, e.g. PhantomJS, encodes < and >.
 // this causes problems with the in-browser parser.
-var shouldDecodeTags = inBrowser ? shouldDecode('>', '&gt;') : false
+
+// 检查'>' 能否被编码成'&gt' 
+var shouldDecodeTags = inBrowser ? shouldDecode('>', '&gt;') : false 
 
 // #3663
 // IE encodes newlines inside attribute values while other browsers don't
+// 检查换行符'\n' 能否被编码成'&#10'
 var shouldDecodeNewlines = inBrowser ? shouldDecode('\n', '&#10;') : false
 
 /*  */
 
 var decoder = document.createElement('div')
-
+/*
+ * 返回传入的html去掉元素标签的所有文本
+ */
 function decodeHTML (html) {
   decoder.innerHTML = html
   return decoder.textContent // textContent 和 innerHTML 的区别是 textContent返回纯文本 而innerHTML返回带html标签的文本
@@ -5947,7 +5980,7 @@ function decodeHTML (html) {
 
 // Regular Expressions for parsing tags and attributes
 var singleAttrIdentifier = /([^\s"'<>\/=]+)/
-var singleAttrAssign = /(?:=)/ // 匹配 = 号前面的
+var singleAttrAssign = /(?:=)/ // 匹配 = 号后面的
 var singleAttrValues = [
   // attr value double quotes
   /"([^"]*)"+/.source,
@@ -5996,7 +6029,10 @@ function decodeAttr (value, shouldDecodeTags, shouldDecodeNewlines) {
   }
   return value.replace(ampRE, '&').replace(quoteRE, '"')
 }
-
+/*
+ * 解析html
+ * 
+ */
 function parseHTML (html, options) {
   var stack = []
   var expectHTML = options.expectHTML
@@ -6215,9 +6251,18 @@ function parseHTML (html, options) {
   }
 }
 
-/*  */
+/*
+ * 解析filters
+ * ？？？
+ * 函数作用，抽离出filter表达式里的参数和各个filter
+ * 首先传入一个exp字符串，依次遍历这个字符串
+ * 检查 是否在单引号里面， 是否在双引号里面， 是否是管道符
+ * 
+ */
 
-function parseFilters (exp) { //for example:  message | capitalize
+function parseFilters (exp) { //for example:  message | capitalize'
+  // exp : String
+  
   var inSingle = false // 单引号
   var inDouble = false // 双引号
   var curly = 0 // ()
@@ -6226,9 +6271,9 @@ function parseFilters (exp) { //for example:  message | capitalize
   var lastFilterIndex = 0
   var c, prev, i, expression, filters
 
-  for (i = 0; i < exp.length; i++) { // 遍历exp数组
+  for (i = 0; i < exp.length; i++) { // 
     prev = c // 保存之前的c
-    c = exp.charCodeAt(i)
+    c = exp.charCodeAt(i) // c是当前字符
     if (inSingle) { // 在单引号里
       // check single quote
       if (c === 0x27 && prev !== 0x5C) inSingle = !inSingle // 0x27单引号 0x5c反斜线
@@ -6250,8 +6295,8 @@ function parseFilters (exp) { //for example:  message | capitalize
       }
     } else {
       switch (c) {
-        case 0x22: inDouble = true; break // "
-        case 0x27: inSingle = true; break // '
+        case 0x22: inDouble = true; break // " 第一次遇到双引号时，inDouble设为true
+        case 0x27: inSingle = true; break // ' 第一次遇到单引号时，inSingle设为true
         case 0x28: paren++; break         // (
         case 0x29: paren--; break         // )
         case 0x5B: square++; break        // [
@@ -6282,13 +6327,19 @@ function parseFilters (exp) { //for example:  message | capitalize
   return expression
 }
 
+/*
+ * 包装filter
+ * Vue.prototype._f, 接受一个id参数
+ * 返回this.$options.filters[id] 是一个函数
+ * 函数再接受(exp,args)参数
+ */
 function wrapFilter (exp, filter) { // 
   var i = filter.indexOf('(')
   if (i < 0) { // 如果没有左圆括号
     // _f: resolveFilter
-    return ("_f(\"" + filter + "\")(" + exp + ")")  // _f("filter")(exp)
+    return ("_f(\"" + filter + "\")(" + exp + ")")  // _f("someFilter")(exp)
   } else {
-    var name = filter.slice(0, i)
+    var name = filter.slice(0, i) // 以左圆括号分界
     var args = filter.slice(i + 1)
     return ("_f(\"" + name + "\")(" + exp + "," + args) // _f("name")(exp,args)  这里args已经包含了右括号，
   }
@@ -6338,7 +6389,9 @@ function parseText (  // 解析文本
 function baseWarn (msg) {
   console.error(("[Vue parser]: " + msg))
 }
-
+/*
+ * 寻找modules中的每一个module中key属性值，过滤掉空值
+ */
 function pluckModuleFunction (
   modules,
   key
@@ -6348,15 +6401,38 @@ function pluckModuleFunction (
     // filter 过滤掉map过后数组元素为空的值
     : []
 }
-
+/*
+ * el.props: [
+ *   {
+ *     name: name,
+ *     value: value
+ *   }
+ * ]
+ */
 function addProp (el, name, value) {
   (el.props || (el.props = [])).push({ name: name, value: value })
 }
-
+/*
+ * el.attrs: [
+ *   {
+ *     name: name,
+ *     value: value
+ *   }
+ * ]
+ */
 function addAttr (el, name, value) {
   (el.attrs || (el.attrs = [])).push({ name: name, value: value })
 }
-
+/*
+ * el.directives: [
+ *  {
+ *    name: name,
+ *    value: value,
+ *    arg: arg,
+ *    modifiers: modifiers
+ *  }
+ * ]
+ */
 function addDirective (
   el,
   name,
@@ -6366,8 +6442,14 @@ function addDirective (
 ) {
   (el.directives || (el.directives = [])).push({ name: name, value: value, arg: arg, modifiers: modifiers })
 }
-
-function addHook (el, name, code) {
+/*
+ * addHook
+ * hooks: {
+ *   name: [code1,code2,...]
+ * }
+ * 
+ */
+function addHook (el, name, code) { // code: String
   var hooks = el.hooks || (el.hooks = {})
   var hook = hooks[name]
   /* istanbul ignore if */
@@ -6408,7 +6490,12 @@ function addHandler (
     events[name] = newHandler
   }
 }
-
+/*
+ * 得到绑定的属性
+ * 函数的作用
+ * 1. 先检查是否有dynamicValue，如果有，直接返回
+ * 2. 如果没有通过v-bind绑定，再检查staticValue
+ */
 function getBindingAttr (
   el,
   name,
@@ -6426,7 +6513,12 @@ function getBindingAttr (
     }
   }
 }
-
+/*
+ * 简而言之，函数的作用是
+ * 1. 在el.attrsMap找name属性对应的值，并返回
+ * 2. 在el.attrsList中找到某个对象，删掉
+ * 函数的返回值el.attrsMap[name]
+ */
 function getAndRemoveAttr (el, name) { // attrsMap and attrsList
   var val
   if ((val = el.attrsMap[name]) != null) {
@@ -6470,12 +6562,12 @@ function parse (
   template,
   options
 ) {
-  warn$1 = options.warn || baseWarn
+  warn$1 = options.warn || baseWarn 
   platformGetTagNamespace = options.getTagNamespace || no
   platformMustUseProp = options.mustUseProp || no
   platformIsPreTag = options.isPreTag || no
-  preTransforms = pluckModuleFunction(options.modules, 'preTransformNode')
-  transforms = pluckModuleFunction(options.modules, 'transformNode')
+  preTransforms = pluckModuleFunction(options.modules, 'preTransformNode') // options.modules[preTransformNode] 下同
+  transforms = pluckModuleFunction(options.modules, 'transformNode') 
   postTransforms = pluckModuleFunction(options.modules, 'postTransformNode')
   delimiters = options.delimiters
   var stack = []
@@ -6743,7 +6835,9 @@ function processElse (el, parent) {
     )
   }
 }
-
+/*
+ * 处理v-once
+ */
 function processOnce (el) {
   var once = getAndRemoveAttr(el, 'v-once')
   if (once != null) {
@@ -6826,7 +6920,11 @@ function processAttrs (el) {
     }
   }
 }
-
+/*
+ * 一直向上寻找
+ * 如果el.for 存在，返回true,否则返回false
+ * 检查是否for属性
+ */
 function checkInFor (el) {
   var parent = el
   while (parent) {
@@ -6837,9 +6935,18 @@ function checkInFor (el) {
   }
   return false
 }
-
+/*
+ * 解析修饰符，各个修饰符存储在一个对象里
+ * 如果某个修饰符存在，这个值设为true
+ * 返回一个对象
+ * {
+ *   modifier1: true,
+ *   modifier2: true
+ *   ...
+ * }
+ */
 function parseModifiers (name) {
-  var match = name.match(modifierRE)
+  var match = name.match(modifierRE)  // modifierRE: /\.[^\.]+/g   以.开头
   if (match) {
     var ret = {}
     match.forEach(function (m) { ret[m.slice(1)] = true })
@@ -6854,7 +6961,7 @@ function parseModifiers (name) {
  *     value: ...
  *   }
  * ],
- * return 
+ * ->
  * map: {
  *   name: value
  * }
@@ -6869,7 +6976,10 @@ function makeAttrsMap (attrs) {
   }
   return map
 }
-
+/*
+ * 前一个元素
+ * 元素必须有tag属性
+ */
 function findPrevElement (children) { 
   var i = children.length
   while (i--) {
@@ -7066,7 +7176,7 @@ function normalizeKeyCode (key) {
 
 /*  */
 
-function bind$1 (el, dir) {
+function bind$1 (el, dir) { // el.hooks[construct].push(code)
   addHook(el, 'construct', ("_b(n1," + (dir.value) + (dir.modifiers && dir.modifiers.prop ? ',true' : '') + ")"))
 }
 
@@ -7271,7 +7381,7 @@ function genNode (node) {
 }
 
 function genText (text) {
-  return text.type === 2
+  return text.type === 2 // 文本结点
     ? text.expression // no need for () because already wrapped in _s()
     : JSON.stringify(text.text)
 }
@@ -7289,6 +7399,10 @@ function genComponent (el) {
   return ("_h(" + (el.component) + "," + (genData(el)) + (children ? ("," + children) : '') + ")")
 }
 
+/*
+ * props: Array
+ * prop: Object
+ */
 function genProps (props) {
   var res = ''
   for (var i = 0; i < props.length; i++) {
@@ -7301,6 +7415,7 @@ function genProps (props) {
 function genHooks (hooks) {
   var res = ''
   for (var key in hooks) {
+    // why n1 n2
     res += "\"" + key + "\":function(n1,n2){" + (hooks[key].join(';')) + "},"
   }
   return res.slice(0, -1)
@@ -7310,14 +7425,15 @@ function genHooks (hooks) {
 
 /**
  * Compile a template.
+ * 返回一个对象
  */
 function compile$1 (
   template,
   options
 ) {
-  var ast = parse(template.trim(), options)
+  var ast = parse(template.trim(), options) 
   optimize(ast, options)
-  var code = generate(ast, options)
+  var code = generate(ast, options) // Object
   return {
     ast: ast,
     render: code.render,
@@ -7342,7 +7458,7 @@ var stripStringRE = /'(?:[^'\\]|\\.)*'|"(?:[^"\\]|\\.)*"|`(?:[^`\\]|\\.)*\$\{|\}
 function detectErrors (ast) {
   var errors = []
   if (ast) {
-    checkNode(ast, errors)
+    checkNode(ast, errors) // ast: node 
   }
   return errors
 }
@@ -7650,13 +7766,17 @@ var baseOptions = {
   getTagNamespace: getTagNamespace,
   isPreTag: isPreTag
 }
+/*
+ * 编译模板
+ * 
+ */
 
-function compile (
+function compile ( 
   template,
   options
 ) {
   options = options
-    ? extend(extend({}, baseOptions), options)
+    ? extend(extend({}, baseOptions), options) // 返回一个新对象，而不是在原baseOptions上直接操作
     : baseOptions
   return compile$1(template, options)
 }
@@ -7691,7 +7811,7 @@ function compileToFunctions (
     return cache[key]
   }
   var res = {}
-  var compiled = compile(template, options)
+  var compiled = compile(template, options) // 返回一个对象
   res.render = makeFunction(compiled.render)
   var l = compiled.staticRenderFns.length
   res.staticRenderFns = new Array(l)
@@ -7710,7 +7830,10 @@ function compileToFunctions (
   }
   return (cache[key] = res)
 }
-
+/*
+ * code是一个字符串
+ * 返回一个以code为函数体的函数
+ */
 function makeFunction (code) { // code: String  表示函数体里的内容
   try {
     return new Function(code)
@@ -7726,7 +7849,7 @@ var idToTemplate = cached(function (id) {
   return el && el.innerHTML
 })
 
-var mount = Vue.prototype.$mount
+var mount = Vue.prototype.$mount // 设置一个mount全局变量
 Vue.prototype.$mount = function (
   el,
   hydrating // 
@@ -7742,17 +7865,18 @@ Vue.prototype.$mount = function (
   } // 不能直接挂载在body或html元素上
 
   var options = this.$options
-  // resolve template/el and convert to render function // convert to render function 
-  if (!options.render) {
+  // resolve template/el and convert to render function
+  // 将el或者template转化成render函数
+  if (!options.render) { 
     var template = options.template
     var isFromDOM = false
     if (template) {
-      if (typeof template === 'string') { // template 如果以#开头，那就是在文档中找对应的id
+      if (typeof template === 'string') { // template 如果以#开头，那就是在文档中找id对应的element
         if (template.charAt(0) === '#') {
           isFromDOM = true
           template = idToTemplate(template)
         }
-      } else if (template.nodeType) { // template 可以设置一个对象了？
+      } else if (template.nodeType) { 
         isFromDOM = true
         template = template.innerHTML
       } else {
@@ -7761,7 +7885,7 @@ Vue.prototype.$mount = function (
         }
         return this
       }
-    } else if (el) {
+    } else if (el) { // 不存在template 但传入了el
       isFromDOM = true
       template = getOuterHTML(el)
     } 
@@ -7779,7 +7903,7 @@ Vue.prototype.$mount = function (
       options.staticRenderFns = staticRenderFns
     }
   }
-  return mount.call(this, el, hydrating)
+  return mount.call(this, el, hydrating) // mount函数绑定在vm上
 }
 
 /**
