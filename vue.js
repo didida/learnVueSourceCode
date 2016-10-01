@@ -3772,7 +3772,7 @@ function mergeClassData (child, parent) {
 
 function genClassFromData (data) { // data: Object
   var dynamicClass = data.class // 动态class
-  var staticClass = data.staticClass // 静态class 
+  var staticClass = data.staticClass // 静态class  String
   if (staticClass || dynamicClass) { // 有一个存在即可
     return concat(staticClass, stringifyClass(dynamicClass)) // 静态class在前，动态class在后
   }
@@ -3805,7 +3805,7 @@ function stringifyClass (value) { // value: String | Array | Object
   }
   if (isObject(value)) {
     for (var key in value) {
-      if (value[key]) res += key + ' ' // 只要key，和value[key]无关
+      if (value[key]) res += key + ' ' // 只要key，和value[key]只是做真假判断
     }
     return res.slice(0, -1)
   }
@@ -4037,8 +4037,8 @@ function registerRef (vnode, isRemoval) {  // ???
   var key = vnode.data.ref // ref 
   if (!key) return
 
-  var vm = vnode.context
-  var ref = vnode.child || vnode.elm // wtf elm
+  var vm = vnode.context // 获取vm实例
+  var ref = vnode.child || vnode.elm  // ?
   var refs = vm.$refs  // vm.$refs 包含注册有v-ref的函数
   if (isRemoval) { // 处理remove逻辑
     if (Array.isArray(refs[key])) {
@@ -4606,7 +4606,8 @@ function createPatchFunction (backend) { // ???
 }
 
 /*
- * directives
+ * directives对象
+ * 包括create, update, postpatch，destroy三个函数
  * 
  */
 
@@ -4655,7 +4656,7 @@ function forEachDirective ( // 遍历directive
   vnode,
   fn
 ) {
-  var dirs = vnode.data.directives
+  var dirs = vnode.data.directives // Array
   if (dirs) {
     for (var i = 0; i < dirs.length; i++) {  // 遍历数组
       var dir = dirs[i] 
@@ -4708,7 +4709,7 @@ function updateAttrs (oldVnode, vnode) {
     return
   }
   var key, cur, old
-  var elm = vnode.elm 
+  var elm = vnode.elm // elm是el
   var oldAttrs = oldVnode.data.attrs || {} 
   var attrs = vnode.data.attrs || {}
   // clone observed objects, as the user probably wants to mutate it
@@ -4720,10 +4721,10 @@ function updateAttrs (oldVnode, vnode) {
     cur = attrs[key]
     old = oldAttrs[key]
     if (old !== cur) {
-      setAttr(elm, key, cur)
+      setAttr(elm, key, cur) // 在element上设置属性
     }
   }
-  for (key in oldAttrs) {
+  for (key in oldAttrs) { // 在oldAttrs值为空的属性，移除。
     if (attrs[key] == null) {
       if (isXlink(key)) {
         elm.removeAttributeNS(xlinkNS, getXlinkProp(key))
@@ -4734,7 +4735,8 @@ function updateAttrs (oldVnode, vnode) {
   }
 }
 /*
- * 给el设置属性
+ * 函数的作用是根据key和value设置el的属性值
+ * 
  */
 function setAttr (el, key, value) {
   if (isBooleanAttr(key)) {  // 如果key是布尔值的属性
@@ -4745,7 +4747,7 @@ function setAttr (el, key, value) {
     } else {
       el.setAttribute(key, key)
     }
-  } else if (isEnumeratedAttr(key)) { 
+  } else if (isEnumeratedAttr(key)) {  // 这里必须设置一个false值
     el.setAttribute(key, isFalsyAttrValue(value) || value === 'false' ? 'false' : 'true')
   } else if (isXlink(key)) {
     if (isFalsyAttrValue(value)) {
@@ -4767,10 +4769,12 @@ var attrs = {
   update: updateAttrs
 }
 
-/*  */
+/*
+ * 更新class值
+ */
 
 function updateClass (oldVnode, vnode) {
-  var el = vnode.elm
+  var el = vnode.elm // 获取dom结点
   var data = vnode.data
   var oldData = oldVnode.data
   if (!data.staticClass && !data.class &&
@@ -4778,18 +4782,18 @@ function updateClass (oldVnode, vnode) {
     return
   }
 
-  var cls = genClassForVnode(vnode)
+  var cls = genClassForVnode(vnode) // 返回的是一个字符串
 
   // handle transition classes
   var transitionClass = el._transitionClasses
   if (transitionClass) {
-    cls = concat(cls, stringifyClass(transitionClass))
+    cls = concat(cls, stringifyClass(transitionClass)) // 把transitionClass加在后面
   }
 
   // set the class
   if (cls !== el._prevClass) {
     el.setAttribute('class', cls)
-    el._prevClass = cls
+    el._prevClass = cls // 保存一个prevClass
   }
 }
 
@@ -4821,7 +4825,9 @@ var events = {
   update: updateDOMListeners
 }
 
-/*  */
+/*
+ * 更新DOMProps
+ */
 
 function updateDOMProps (oldVnode, vnode) {
   if (!oldVnode.data.domProps && !vnode.data.domProps) {
@@ -5979,8 +5985,8 @@ function decodeHTML (html) {
  */
 
 // Regular Expressions for parsing tags and attributes
-var singleAttrIdentifier = /([^\s"'<>\/=]+)/
-var singleAttrAssign = /(?:=)/ // 匹配 = 号后面的
+var singleAttrIdentifier = /([^\s"'<>\/=]+)/ // 不是空格，", ', <, >, \, /, = 
+var singleAttrAssign = /(?:=)/ // 匹配 =
 var singleAttrValues = [
   // attr value double quotes
   /"([^"]*)"+/.source,
@@ -5997,15 +6003,20 @@ var attribute = new RegExp(
 
 // could use https://www.w3.org/TR/1999/REC-xml-names-19990114/#NT-QName
 // but for Vue templates we can enforce a simple charset
-var ncname = '[a-zA-Z_][\\w\\-\\.]*'
+var ncname = '[a-zA-Z_][\\w\\-\\.]*' //  /[a-zA-Z_][\w\-\.]*/  以字母或者下划线开头
+
+// 关于qnameCapture
+// 匹配一个ncname
+// 如果出现:
+// 后面一定要有[a-zA-Z_]
 var qnameCapture = '((?:' + ncname + '\\:)?' + ncname + ')'
-var startTagOpen = new RegExp('^<' + qnameCapture)
-var startTagClose = /^\s*(\/?)>/ // 以任意个空格开头 0个或一个/ >
-var endTag = new RegExp('^<\\/' + qnameCapture + '[^>]*>')
-var doctype = /^<!DOCTYPE [^>]+>/i 
+var startTagOpen = new RegExp('^<' + qnameCapture) // 匹配标签左开
+var startTagClose = /^\s*(\/?)>/ // 标签右关
+var endTag = new RegExp('^<\\/' + qnameCapture + '[^>]*>') // 结束标签
+var doctype = /^<!DOCTYPE [^>]+>/i  // doctype
 
 var IS_REGEX_CAPTURING_BROKEN = false
-'x'.replace(/x(.)?/g, function (m, g) {  // replace函数 
+'x'.replace(/x(.)?/g, function (m, g) {  // ???
   IS_REGEX_CAPTURING_BROKEN = g === ''
 })
 
@@ -6020,6 +6031,9 @@ var nlRE = /&#10;/g // 换行
 var ampRE = /&amp;/g // "&"
 var quoteRE = /&quot;/g // """"
 
+/*
+ * 对属性进行解码
+ */
 function decodeAttr (value, shouldDecodeTags, shouldDecodeNewlines) {
   if (shouldDecodeTags) {
     value = value.replace(ltRE, '<').replace(gtRE, '>')
@@ -6043,21 +6057,22 @@ function parseHTML (html, options) {
   while (html) {
     last = html
     // Make sure we're not in a script or style element
-    if (!lastTag || !isSpecialTag(lastTag)) {
+    if (!lastTag || !isSpecialTag(lastTag)) { // lastTag不存在，或者lastTag不是script或者style 
       var textEnd = html.indexOf('<')
-      if (textEnd === 0) {
+      if (textEnd === 0) { // 如果html以<开头
         // Comment:
         if (/^<!--/.test(html)) {// 以<!--开头 下同
-          var commentEnd = html.indexOf('-->')
+          var commentEnd = html.indexOf('-->') // 有配对的'--> '
 
           if (commentEnd >= 0) {
-            advance(commentEnd + 3)
-            continue
+            advance(commentEnd + 3) // 切掉前面的注释
+            continue // 执行下一次while
           }
         }
 
         // http://en.wikipedia.org/wiki/Conditional_comment#Downlevel-revealed_conditional_comment
-        if (/^<!\[/.test(html)) {
+        // 同样切掉
+        if (/^<!\[/.test(html)) { 
           var conditionalEnd = html.indexOf(']>')
 
           if (conditionalEnd >= 0) {
@@ -6066,23 +6081,24 @@ function parseHTML (html, options) {
           }
         }
 
-        // Doctype:
+        // Doctype:  /^<!DOCTYPE [^>]+>/i 
+        // 切掉doctype
         var doctypeMatch = html.match(doctype)
         if (doctypeMatch) {
           advance(doctypeMatch[0].length)
           continue
         }
 
-        // End tag:
+        // End tag:  new RegExp('^<\\/' + qnameCapture + '[^>]*>')
         var endTagMatch = html.match(endTag)
-        if (endTagMatch) {  
+        if (endTagMatch) {  // 如果html中有结束标签
           var curIndex = index
           advance(endTagMatch[0].length)
           parseEndTag(endTagMatch[0], endTagMatch[1], curIndex, index)
           continue
         }
 
-        // Start tag:
+        // Start tag: 
         var startTagMatch = parseStartTag()
         if (startTagMatch) {
           handleStartTag(startTagMatch)
@@ -6135,31 +6151,42 @@ function parseHTML (html, options) {
     index += n
     html = html.substring(n)
   }
-
+  /*
+   * 函数的作用
+   * 由于在开始标签中可能会定义一些属性等等，所以要对整个进行解析
+   * 返回值match: {
+   *   tagName: String,
+   *   attrs: [String,...],
+   *   start: Number,
+   *   unarySlash: '/' | undefined,
+   *   end: Number
+   * }
+   */
   function parseStartTag () {
-    var start = html.match(startTagOpen)
+    var start = html.match(startTagOpen) // startTagOpen: new RegExp('^<' + qnameCapture)   html要以开始标签打头
     if (start) {
       var match = {
         tagName: start[1],
         attrs: [],
         start: index
       }
-      advance(start[0].length)
+      advance(start[0].length) // 切掉这个开始标签
       var end, attr
-      while (!(end = html.match(startTagClose)) && (attr = html.match(attribute))) {
-        advance(attr[0].length)
-        match.attrs.push(attr)
-      }
-      if (end) {
-        match.unarySlash = end[1]
-        advance(end[0].length)
-        match.end = index
+      // startTagClose: /^\s*(\/?)>/
+      while (!(end = html.match(startTagClose)) && (attr = html.match(attribute))) { // 匹配属性正则表达式
+        advance(attr[0].length) // 再切掉html
+        match.attrs.push(attr) // 
+      } // 直到匹配到了startTagclose 或者匹配不到属性了
+      if (end) { // 这里表示end匹配到了startTagClose ，循环结束。
+        match.unarySlash = end[1] // 是否有/ 或者是不是自闭合标签
+        advance(end[0].length) // 切掉整个startTagClose
+        match.end = index // 同时在match上设置一个end属性
         return match
       }
     }
   }
 
-  function handleStartTag (match) {
+  function handleStartTag (match) { // 参数是返回的match对象
     var tagName = match.tagName
     var unarySlash = match.unarySlash
 
@@ -6206,12 +6233,13 @@ function parseHTML (html, options) {
     }
   }
 
-  function parseEndTag (tag, tagName, start, end) { // tag是匹配到的全部字符串  tagName是捕获组，start 是curIndex,end是index
+  function parseEndTag (tag, tagName, start, end) { 
     var pos
     if (start == null) start = index
     if (end == null) end = index
 
     // Find the closest opened tag of the same type
+    // stack用于缓存之前的startTag
     if (tagName) {
       var needle = tagName.toLowerCase()
       for (pos = stack.length - 1; pos >= 0; pos--) { // stack是函数一开始定义的一个数组，
@@ -6228,7 +6256,7 @@ function parseHTML (html, options) {
     if (pos >= 0) {
       // Close all the open elements, up the stack
       for (var i = stack.length - 1; i >= pos; i--) {
-        if (options.end) { // options是parseHtml传入的options
+        if (options.end) { // options是parseHtml传入的options, Function
           options.end(stack[i].tag, start, end)
         }
       }
@@ -7031,7 +7059,7 @@ var genStaticKeysCached = cached(genStaticKeys$1)
  *    create fresh nodes for them on each re-render;
  * 2. Completely skip them in the patching process.
  */
-function optimize (root, options) {
+function optimize (root, options) { // ast options
   if (!root) return
   isStaticKey = genStaticKeysCached(options.staticKeys || '')
   isPlatformReservedTag = options.isReservedTag || (function () { return false; })
@@ -7048,12 +7076,12 @@ function genStaticKeys$1 (keys) {
   )
 }
 
-function markStatic (node) {
-  node.static = isStatic(node)
+function markStatic (node) { // root
+  node.static = isStatic(node) // 增加node.static属性
   if (node.type === 1) {
     for (var i = 0, l = node.children.length; i < l; i++) {
       var child = node.children[i]
-      markStatic(child)
+      markStatic(child) // 同样给chiil结点增加static属性
       if (!child.static) {
         node.static = false
       }
@@ -7063,9 +7091,9 @@ function markStatic (node) {
 
 function markStaticRoots (node, isInFor) {
   if (node.type === 1) {
-    if (node.once || node.static) {
-      node.staticRoot = true
-      node.staticInFor = isInFor
+    if (node.once || node.static) { // 这里要先使用到static属性
+      node.staticRoot = true // 增加一个staticRoot属性
+      node.staticInFor = isInFor // 增加一个staticInFor属性
       return
     }
     if (node.children) {
@@ -7076,7 +7104,7 @@ function markStaticRoots (node, isInFor) {
   }
 }
 
-function isStatic (node) {
+function isStatic (node) { // 静态node
   if (node.type === 2) { // expression
     return false
   }
@@ -7093,9 +7121,14 @@ function isStatic (node) {
 }
 
 /*  */
-
+//以字母，_或者$开头，+ 任意数量的\w，表示一个对象
+//.aaa 或者   表示点字符读取属性
+//['aaa'] 或者  表示[]读取属性
+//["aaa"] 或者
+//[123] 或者
+//[abcd1] 
 var simplePathRE = /^[A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*|\['.*?'\]|\[".*?"\]|\[\d+\]|\[[A-Za-z_$][\w$]*\])*$/
-//                                                         ['...']    ["..."]  [1234]    []
+ 
 
 // keyCode aliases
 var keyCodes = {
@@ -7116,6 +7149,11 @@ var modifierCode = { // 修饰符
   self: 'if($event.target !== $event.currentTarget)return;'
 }
 
+/*
+ * 函数的作用
+ * 产生一个字符串res,res展开后是一个对象的形式
+ * 
+ */
 function genHandlers (events, native) {
   var res = native ? 'nativeOn:{' : 'on:{'
   for (var name in events) { // events: Object
@@ -7124,21 +7162,26 @@ function genHandlers (events, native) {
   return res.slice(0, -1) + '}'
 }
 
-function genHandler ( //  返回一个函数
+/*
+ * 函数的作用
+ * 传入一个handler
+ * 
+ */
+function genHandler (
   handler
 ) {
   if (!handler) {
     return 'function(){}'
-  } else if (Array.isArray(handler)) {
+  } else if (Array.isArray(handler)) { // 如果handler是一个数组，遍历
     return ("[" + (handler.map(genHandler).join(',')) + "]")
   } else if (!handler.modifiers) { 
     return simplePathRE.test(handler.value) // handler.value
       ? handler.value
       : ("function($event){" + (handler.value) + "}")
-  } else {
+  } else { // handler.modifiers存在
     var code = ''
     var keys = []
-    for (var key in handler.modifiers) {
+    for (var key in handler.modifiers) { // key可以有自定义的
       if (modifierCode[key]) {
         code += modifierCode[key]
       } else {
@@ -7146,12 +7189,12 @@ function genHandler ( //  返回一个函数
       }
     }
     if (keys.length) {
-      code = genKeyFilter(keys) + code
+      code = genKeyFilter(keys) + code // genKeyFilter(keys)在前
     }
-    var handlerCode = simplePathRE.test(handler.value)
-      ? handler.value + '($event)'
+    var handlerCode = simplePathRE.test(handler.value) // 
+      ? handler.value + '($event)' // 这里如果handler是一个函数，传入参数$event
       : handler.value
-    return 'function($event){' + code + handlerCode + '}'
+    return 'function($event){' + code + handlerCode + '}' // 返回一个函数的全部内容，以字符串的形式
   }
 }
 
@@ -7166,7 +7209,7 @@ function genKeyFilter (keys) {
   }
 }
 
-function normalizeKeyCode (key) {
+function normalizeKeyCode (key) { // key: Number | String
   return (
     parseInt(key, 10) || // number keyCode
     keyCodes[key] || // built-in alias
@@ -7775,12 +7818,24 @@ function compile (
   template,
   options
 ) {
-  options = options
+  options = options // 拓展options
     ? extend(extend({}, baseOptions), options) // 返回一个新对象，而不是在原baseOptions上直接操作
     : baseOptions
   return compile$1(template, options)
 }
-
+/*
+ * compile string to functions
+ * 函数的作用 模板转化为函数
+ * 首先获得compiled: {
+ *   render: String,
+ *   staticRenderFns: [String,...]
+ * }
+ * 通过makeFunction函数，使得String 变成 真正的fuction
+ * 最后返回一个对象res: {
+ *   render: Function,
+ *   staticRenderFns: [Function, ]
+ * }
+ */
 function compileToFunctions (
   template,
   options,
@@ -7789,7 +7844,7 @@ function compileToFunctions (
   var _warn = (options && options.warn) || warn
   // detect possible CSP restriction
   /* istanbul ignore if */
-  if ("development" !== 'production') {  // ?????
+  if ("development" !== 'production') {  //
     try {
       new Function('return 1')
     } catch (e) {
@@ -7807,12 +7862,12 @@ function compileToFunctions (
   var key = options && options.delimiters
     ? String(options.delimiters) + template
     : template
-  if (cache[key]) {
+  if (cache[key]) { // cache初始化时是一个空对象
     return cache[key]
   }
   var res = {}
   var compiled = compile(template, options) // 返回一个对象
-  res.render = makeFunction(compiled.render)
+  res.render = makeFunction(compiled.render) // compiled.render: String
   var l = compiled.staticRenderFns.length
   res.staticRenderFns = new Array(l)
   for (var i = 0; i < l; i++) {
@@ -7867,16 +7922,17 @@ Vue.prototype.$mount = function (
   var options = this.$options
   // resolve template/el and convert to render function
   // 将el或者template转化成render函数
-  if (!options.render) { 
+
+  if (!options.render) { // render函数
     var template = options.template
     var isFromDOM = false
     if (template) {
-      if (typeof template === 'string') { // template 如果以#开头，那就是在文档中找id对应的element
+      if (typeof template === 'string') { // template可能是以#开头的字符串
         if (template.charAt(0) === '#') {
           isFromDOM = true
           template = idToTemplate(template)
         }
-      } else if (template.nodeType) { 
+      } else if (template.nodeType) { // template还有可能是一个dom结点
         isFromDOM = true
         template = template.innerHTML
       } else {
@@ -7885,11 +7941,11 @@ Vue.prototype.$mount = function (
         }
         return this
       }
-    } else if (el) { // 不存在template 但传入了el
+    } else if (el) { // 如果也不存在template属性，那就操作el
       isFromDOM = true
       template = getOuterHTML(el)
     } 
-    if (template) {
+    if (template) { // 如果template存在，开始编译模板
       var ref = compileToFunctions(template, {
         warn: warn,
         isFromDOM: isFromDOM,
@@ -7899,6 +7955,7 @@ Vue.prototype.$mount = function (
       }, this);
       var render = ref.render;
       var staticRenderFns = ref.staticRenderFns;
+      // options获得render和staticRenderFns属性
       options.render = render
       options.staticRenderFns = staticRenderFns
     }
