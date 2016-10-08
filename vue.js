@@ -758,7 +758,7 @@ var Watcher = function Watcher (
  */
 Watcher.prototype.get = function get () {
   pushTarget(this)  // 将之前的Dep.target 指向的watcher 推入栈中，并设置Dep.target为此 watcher实例
-  // 初始化一个watcher实例（如果this.lazy为false）调用了get函数之后，Dep.target函数也将改变，变成当前的watcher实例
+  // 初始化一个watcher实例（如果this.lazy为false）调用了get函数之后，Dep.target也将改变，变成当前的watcher实例
   var value = this.getter.call(this.vm, this.vm)  // this.vm作为参数传入getter函数
   // "touch" every property so they are all tracked as
   // dependencies for deep watching
@@ -1249,7 +1249,7 @@ function initState (vm) {
  * 初始化props
  */
 function initProps (vm) {   
-  var props = vm.$options.props   】
+  var props = vm.$options.props   
   var propsData = vm.$options.propsData
   if (props) {
 
@@ -2274,6 +2274,8 @@ function createElement (
   data,
   children
 ) {
+  // 可以省略data
+  // 当第二个参数为数组或者原始值时，vue会认为传入的是children，而未传入data，最终data设为undefined，child设为data
   if (data && (Array.isArray(data) || typeof data !== 'object')) {
     children = data
     data = undefined
@@ -2837,7 +2839,7 @@ if ("development" !== 'production') {
  * Helper that recursively merges two data objects together.
  * 合并规则：
  * 1. 如果from中的某个属性to中有，保留to中的，什么都不做。
- * 2. 如果to中没有，赋值。y
+ * 2. 如果to中没有，赋值。
  * 3. 如果to中和from中的某个属性值都是对象，递归调用。
  */
 function mergeData (to, from) { 
@@ -2875,24 +2877,24 @@ strats.data = function (
     if (!childVal) {
       return parentVal
     }
-    if (typeof childVal !== 'function') {
+    if (typeof childVal !== 'function') {  // 在组件中定义data 必须是一个函数
       "development" !== 'production' && warn(
         'The "data" option should be a function ' +
         'that returns a per-instance value in component ' +
         'definitions.',
         vm
       )
-      return parentVal
+      return parentVal // 报完错，返回parentVal的data
     }
     if (!parentVal) {
-      return childVal
+      return childVal // parentVal不存在，返回 childVal的data
     }
     // when parentVal & childVal are both present,
     // we need to return a function that returns the
     // merged result of both functions... no need to
     // check if parentVal is a function here because
     // it has to be a function to pass previous merges.
-    return function mergedDataFn () {
+    return function mergedDataFn () {  // 这里应该返回一个函数，函数的执行结果就是返回一个合并后的对象
       return mergeData(
         childVal.call(this),
         parentVal.call(this)
@@ -2932,7 +2934,7 @@ function mergeHook (
 ) {
   return childVal
     ? parentVal // 如果 childVal存在
-      ? parentVal.concat(childVal) // 如果parent存在，直接合并
+      ? parentVal.concat(childVal) // 如果parentVal存在，直接合并
       : Array.isArray(childVal) // 如果parentVal不存在
         ? childVal  // 如果chilidVal是数组，直接返回
         : [childVal] // 包装成一个数组返回
@@ -2979,16 +2981,16 @@ strats.watch = function (parentVal, childVal) { // parentVal: Object childVal: O
   if (!childVal) return parentVal
   if (!parentVal) return childVal
   var ret = {}
-  extend(ret, parentVal) // ret首先获得parentVal的全部属性
+  extend(ret, parentVal) // res首先获得parentVal的全部属性
   for (var key in childVal) {
-    var parent = ret[key]
+    var parent = ret[key] // 子组件的某个watcher在父组件中的值
     var child = childVal[key]
     if (parent && !Array.isArray(parent)) {
-      parent = [parent] // 如果parent不是一个数组，将其变成一个数组
+      parent = [parent] // 如果parent不是一个数组，将其包装成一个数组
     }
     ret[key] = parent
       ? parent.concat(child) // parent在前，child在后
-      : [child]
+      : [child] // 如果在父组件中不存在，以数组的形式存储子组件的watcher
   }
   return ret
 }
@@ -3008,7 +3010,7 @@ strats.computed = function (parentVal, childVal) { // parentVal: Object childVal
   if (!parentVal) return childVal
   var ret = Object.create(null)
   extend(ret, parentVal)
-  extend(ret, childVal)
+  extend(ret, childVal)  //  child的会覆盖parent的
   return ret
 }
 
@@ -3375,7 +3377,7 @@ function assertProp (
  * 函数的作用是返回一个对象，包含valid,expectedType等信息
  * 
  */
-function assertType (value, type) {  // 传入的type是什么? 字符串
+function assertType (value, type) {
   var valid
   var expectedType = getType(type)
   if (expectedType === 'String') { // 
@@ -3594,7 +3596,9 @@ function initAssetRegisters (Vue) {
     }
   })
 }
-
+/*
+ * keepAlive 组件
+ */
 var KeepAlive = {
   name: 'keep-alive',
   abstract: true,
@@ -3635,7 +3639,7 @@ var builtInComponents = {
 }
 
 /*
- * 初始话全局API
+ * 初始化全局API
  */
 function initGlobalAPI (Vue) { 
   // config
@@ -3728,6 +3732,7 @@ var isFalsyAttrValue = function (val) { // val是一个假值
 }
 
 /* 
+ * 从一个vnode中提出出 class 属性，返回一个字符串
  * 开始处理 class 
  * 合并一个结点的父节点，子节点的所有class 最终返回一个以空格分隔的字符串，
  * class 包括 staticClass 和 动态class
@@ -3769,7 +3774,9 @@ function mergeClassData (child, parent) {
       : parent.class
   }
 }
-
+/*
+ * 从data对象获得class的字符串
+ */
 function genClassFromData (data) { // data: Object
   var dynamicClass = data.class // 动态class
   var staticClass = data.staticClass // 静态class  String
@@ -3816,7 +3823,6 @@ function stringifyClass (value) { // value: String | Array | Object
 /*
  * 处理html相关
  */
-
 var namespaceMap = {
   svg: 'http://www.w3.org/2000/svg',
   math: 'http://www.w3.org/1998/Math/MathML'
@@ -3839,7 +3845,7 @@ var isHTMLTag = makeMap(  // 所有的html标签
 var isUnaryTag = makeMap( // 一元标签 ？
   'area,base,br,col,embed,frame,hr,img,input,isindex,keygen,' +
   'link,meta,param,source,track,wbr',
-  true // true表示应该小写
+  true // 应该小写
 )
 
 // Elements that you can, intentionally, leave open
@@ -3851,6 +3857,8 @@ var canBeLeftOpenTag = makeMap( // 自闭合标签
 
 // HTML5 tags https://html.spec.whatwg.org/multipage/indices.html#elements-3
 // Phrasing Content https://html.spec.whatwg.org/multipage/dom.html#phrasing-content
+// Phrasing（段落元素）
+// 段落式元素是文档中的文本、标记段落级文本的元素
 var isNonPhrasingTag = makeMap(  // html5 phrasing标签 ？
   'address,article,aside,base,blockquote,body,caption,col,colgroup,dd,' +
   'details,dialog,div,dl,dt,fieldset,figcaption,figure,footer,form,' +
@@ -4015,7 +4023,7 @@ var nodeOps = Object.freeze({  // 定义了一个nodeOps对象，封装了一些
 });
 
 /*
- * v-ref?？？ some questions
+ * v-ref  some questions
  */
 
 var ref = { 
@@ -4039,7 +4047,7 @@ function registerRef (vnode, isRemoval) {  // ???
 
   var vm = vnode.context // 获取vm实例
   var ref = vnode.child || vnode.elm  // ?
-  var refs = vm.$refs  // vm.$refs 包含注册有v-ref的函数
+  var refs = vm.$refs  // vm.$refs 包含注册有v-ref的组件
   if (isRemoval) { // 处理remove逻辑
     if (Array.isArray(refs[key])) {
       remove(refs[key], ref)
@@ -4047,7 +4055,7 @@ function registerRef (vnode, isRemoval) {  // ???
       refs[key] = undefined
     }
   } else {
-    if (vnode.data.refInFor) { // 处理添加逻辑
+    if (vnode.data.refInFor) { // 处理添加逻辑  refInFor?
       if (Array.isArray(refs[key])) {
         refs[key].push(ref)
       } else {
@@ -4089,7 +4097,7 @@ function isDef (s) {
   return s != null
 }
 
-function sameVnode (vnode1, vnode2) { // 判断标准 key,tag,isComment,data
+function sameVnode (vnode1, vnode2) { // 判断标准 key,tag,isComment,data同时存在或同时不存在
   return (
     vnode1.key === vnode2.key &&
     vnode1.tag === vnode2.tag &&
@@ -4098,11 +4106,11 @@ function sameVnode (vnode1, vnode2) { // 判断标准 key,tag,isComment,data
   )
 }
 
-function createKeyToOldIdx (children, beginIdx, endIdx) { // child: Array  
+function createKeyToOldIdx (children, beginIdx, endIdx) { // children: Array  
   var i, key
   var map = {}
   for (i = beginIdx; i <= endIdx; ++i) {
-    key = children[i].key // 如果该child上有key属性
+    key = children[i].key // children是一个vnode结点，找到key属性
     if (isDef(key)) map[key] = i 
   }
   /**
@@ -4113,39 +4121,40 @@ function createKeyToOldIdx (children, beginIdx, endIdx) { // child: Array
   return map
 }
 
-function createPatchFunction (backend) { // ???
+function createPatchFunction (backend) {  // line 4122-4612
   var i, j 
   var cbs = {}
   /*
-   * modules: [
-   * 	{
-   * 		create,
-   *   		upadte,
-   *   		...
-   * 	},
-   * 	{
-   * 		create,
-   *   		upadte,
-   *   		...
-   * 	}
-   * ]
+   * cbs: {
+   *   create: [],
+   *   update: [],
+   *   ...
+   * 
+   * }
    */
   var modules = backend.modules;
   var nodeOps = backend.nodeOps;  
 
   for (i = 0; i < hooks$1.length; ++i) { // hooks$1 = ['create', 'update', 'postpatch', 'remove', 'destroy']
-    cbs[hooks$1[i]] = []
+    cbs[hooks$1[i]] = [] // 为每一个hook创建一个数组
     for (j = 0; j < modules.length; ++j) {
       if (modules[j][hooks$1[i]] !== undefined) cbs[hooks$1[i]].push(modules[j][hooks$1[i]])
+        // modules[j] 一个对象？
+        // 刚刚创建的数组推入modules[j][hooks$1[i]]
     }
-  }
+  } // 这里
 
-  function emptyNodeAt (elm) {
+  function emptyNodeAt (elm) { // 
     return new VNode(nodeOps.tagName(elm).toLowerCase(), {}, [], undefined, elm) 
     // tag, data, children, text, element
-    // 产生一个只有标签名的空node
+    // 产生一个只有elm标签名的空node, 而且node.elm = elm
   }
-
+  /*
+   * 返回一个函数 remove
+   * 每执行一次remove函数
+   * remove.listeners就会减少1
+   * 直到减少到0 移除这个childElm
+   */
   function createRmCb (childElm, listeners) {
     function remove () {
       if (--remove.listeners === 0) {
@@ -4257,7 +4266,7 @@ function createPatchFunction (backend) { // ???
   // set scope id attribute for scoped CSS.
   // this is implemented as a special case to avoid the overhead
   // of going through the normal attribute patching process.
-  function setScope (vnode) {
+  function setScope (vnode) {  // 增加_scopeId属性
     var i
     if (isDef(i = vnode.context) && isDef(i = i.$options._scopeId)) {
       nodeOps.setAttribute(vnode.elm, i, '')
@@ -4607,7 +4616,7 @@ function createPatchFunction (backend) { // ???
 
 /*
  * directives对象
- * 包括create, update, postpatch，destroy三个函数
+ * 包括create, update, postpatch，destroy四个函数
  * 
  */
 
@@ -4662,6 +4671,7 @@ function forEachDirective ( // 遍历directive
       var dir = dirs[i] 
       var def = resolveAsset(vnode.context.$options, 'directives', dir.name, true) // options.type.id
       // 简单点说就是 vnode.context.$options[directives][dir.name]，
+      // 也就是获得options中directives dir.name对应的directiove
       if (def) {
         var oldDirs = oldVnode && oldVnode.data.directives
         if (oldDirs) {
@@ -4686,7 +4696,7 @@ function applyDirectives (
   })
 }
 /*
- * 在传入的def上找到对应的hook函数
+ * 在传入的def上找到对应的hook函数，并执行
  */
 function callHook$1 (def, dir, hook, vnode, oldVnode) {
   var fn = def && def[hook]
@@ -4703,18 +4713,17 @@ var baseModules = [
 /* 
  * 
  */
-
 function updateAttrs (oldVnode, vnode) {
-  if (!oldVnode.data.attrs && !vnode.data.attrs) {  // 同时都没有 返回 什么都不做
+  if (!oldVnode.data.attrs && !vnode.data.attrs) {
     return
   }
   var key, cur, old
   var elm = vnode.elm // elm是el
   var oldAttrs = oldVnode.data.attrs || {} 
-  var attrs = vnode.data.attrs || {}
+  var attrs = vnode.data.attrs || {} 
   // clone observed objects, as the user probably wants to mutate it
   if (attrs.__ob__) {
-    attrs = vnode.data.attrs = extend({}, attrs)
+    attrs = vnode.data.attrs = extend({}, attrs) // vnode.data.attrs设置为一个新对象，触发更新
   }
 
   for (key in attrs) {
@@ -5410,15 +5419,16 @@ var patch = createPatchFunction({ nodeOps: nodeOps, modules: modules })
  * 处理 v-model
  */
 
-var modelableTagRE = /^input|select|textarea|vue-component-[0-9]+(-[0-9a-zA-Z_\-]*)?$/ // vue-compoent-一个数字？
+var modelableTagRE = /^input|select|textarea|vue-component-[0-9]+(-[0-9a-zA-Z_\-]*)?$/ // vue-compoent-多个数字-
 
 /* istanbul ignore if */
+// 如果是IE9 监听 selectionchange事件
 if (isIE9) {
   // http://www.matts411.com/post/internet-explorer-9-oninput/
   document.addEventListener('selectionchange', function () {
     var el = document.activeElement // 返回文档中当前获得焦点的元素
     if (el && el.vmodel) { // 如果绑定了v-model  el.vmodel: Boolean
-      trigger(el, 'input')
+      trigger(el, 'input') // 触发el的input事件
     }
   })
 }
@@ -5577,7 +5587,7 @@ var show = {
   }
 }
 
-var platformDirectives = {
+var platformDirectives = { // v-model v-show
   model: model,
   show: show
 }
@@ -5890,7 +5900,7 @@ var TransitionGroup = {
   }
 }
 
-var platformComponents = {
+var platformComponents = {  // Transition 和 TransitionGroup组件
   Transition: Transition,
   TransitionGroup: TransitionGroup
 }
@@ -5940,7 +5950,7 @@ setTimeout(function () {
 /*  */
 
 // check whether current browser encodes a char inside attribute values
-// 检查当前浏览器能否编码属性值里面的字符
+// 检查当前浏览器能否编码属性值里面的字符,从而决定是否应该解码
 function shouldDecode (content, encoded) {
   var div = document.createElement('div')
   div.innerHTML = "<div a=\"" + content + "\">"
@@ -5988,13 +5998,14 @@ function decodeHTML (html) {
 var singleAttrIdentifier = /([^\s"'<>\/=]+)/ // 不是空格，", ', <, >, \, /, = 
 var singleAttrAssign = /(?:=)/ // 匹配 =
 var singleAttrValues = [
-  // attr value double quotes
+  // attr value double quotes 双引号
   /"([^"]*)"+/.source,
-  // attr value, single quotes
+  // attr value, single quotes 单引号
   /'([^']*)'+/.source,
-  // attr value, no quotes
+  // attr value, no quotes  没有引号
   /([^\s"'=<>`]+)/.source
 ]
+// 整个attribute
 var attribute = new RegExp(
   '^\\s*' + singleAttrIdentifier.source +
   '(?:\\s*(' + singleAttrAssign.source + ')' +
@@ -6157,18 +6168,18 @@ function parseHTML (html, options) {
    * 返回值match: {
    *   tagName: String,
    *   attrs: [String,...],
-   *   start: Number,
+   *   start: Number, // 开始位置
    *   unarySlash: '/' | undefined,
-   *   end: Number
+   *   end: Number // 结束位置
    * }
    */
   function parseStartTag () {
     var start = html.match(startTagOpen) // startTagOpen: new RegExp('^<' + qnameCapture)   html要以开始标签打头
     if (start) {
       var match = {
-        tagName: start[1],
-        attrs: [],
-        start: index
+        tagName: start[1], // 匹配qnameCapture
+        attrs: [], 
+        start: index // 全局的一个index
       }
       advance(start[0].length) // 切掉这个开始标签
       var end, attr
@@ -6178,15 +6189,17 @@ function parseHTML (html, options) {
         match.attrs.push(attr) // 
       } // 直到匹配到了startTagclose 或者匹配不到属性了
       if (end) { // 这里表示end匹配到了startTagClose ，循环结束。
-        match.unarySlash = end[1] // 是否有/ 或者是不是自闭合标签
+        match.unarySlash = end[1] // 匹配到的'/' 或者undefined
         advance(end[0].length) // 切掉整个startTagClose
-        match.end = index // 同时在match上设置一个end属性
+        match.end = index // 同时在match上设置一个end属性，等于当前的一个全局index
         return match
       }
     }
   }
-
-  function handleStartTag (match) { // 参数是返回的match对象
+  /*
+   * 处理返回的match对象
+   */
+  function handleStartTag (match) {
     var tagName = match.tagName
     var unarySlash = match.unarySlash
 
@@ -6233,16 +6246,15 @@ function parseHTML (html, options) {
     }
   }
 
-  function parseEndTag (tag, tagName, start, end) { 
+  function parseEndTag (tag, tagName, start, end) { // 0 == null => false
     var pos
     if (start == null) start = index
     if (end == null) end = index
 
-    // Find the closest opened tag of the same type
-    // stack用于缓存之前的startTag
+    // Find the closest opened tag of the same type 
     if (tagName) {
       var needle = tagName.toLowerCase()
-      for (pos = stack.length - 1; pos >= 0; pos--) { // stack是函数一开始定义的一个数组，
+      for (pos = stack.length - 1; pos >= 0; pos--) { // stack是parseHtml函数的一个全局数组
         // 如果stack里之前存在needle，退出循环
         if (stack[pos].tag.toLowerCase() === needle) {
           break
@@ -6281,27 +6293,37 @@ function parseHTML (html, options) {
 
 /*
  * 解析filters
- * ？？？
  * 函数作用，抽离出filter表达式里的参数和各个filter
  * 首先传入一个exp字符串，依次遍历这个字符串
  * 检查 是否在单引号里面， 是否在双引号里面， 是否是管道符
  * 
  */
 
-function parseFilters (exp) { //for example:  message | capitalize'
-  // exp : String
+function parseFilters (exp) { //e.g. message | filterA | filterB
+// message | filterA('arg1', arg2)
+
+// 以message | filterA | filterB为例
+// 第一次碰到 '|' 时，执行pushFilter方法
+// filters: ['filterA']  expression: _f("filterA")()
+// 第二次碰到'|'时
+// filters: ['filterA', 'filterB']   expression: _f("filterB")(_f('filterA')) 
+// 表示先经过filterA处理，再由filterB处理。
+// 
+// 再以 message | filter('arg1', arg2)
+// 
   
   var inSingle = false // 单引号
   var inDouble = false // 双引号
-  var curly = 0 // ()
+  var curly = 0 // {}
   var square = 0 // []
-  var paren = 0 // {}
+  var paren = 0 // ()
   var lastFilterIndex = 0
   var c, prev, i, expression, filters
 
   for (i = 0; i < exp.length; i++) { // 
     prev = c // 保存之前的c
     c = exp.charCodeAt(i) // c是当前字符
+
     if (inSingle) { // 在单引号里
       // check single quote
       if (c === 0x27 && prev !== 0x5C) inSingle = !inSingle // 0x27单引号 0x5c反斜线
@@ -6312,7 +6334,7 @@ function parseFilters (exp) { //for example:  message | capitalize'
       c === 0x7C && // pipe | 如果没有碰到双引号或者单引号
       exp.charCodeAt(i + 1) !== 0x7C && // 而且下一个和前一个都不是 | 
       exp.charCodeAt(i - 1) !== 0x7C &&
-      !curly && !square && !paren // 之前没有有（左）圆括号 方括号 花括号 也就是说不在括号之中
+      !curly && !square && !paren // 之前没有（左）圆括号 方括号 花括号 也就是说不在括号之中
     ) {
       if (expression === undefined) { 
         // first filter, end of expression
@@ -6340,9 +6362,11 @@ function parseFilters (exp) { //for example:  message | capitalize'
   } else if (lastFilterIndex !== 0) { 
     pushFilter()
   }
-
+  /*
+   * 收集filters
+   */
   function pushFilter () {  // exp传入的exp
-    (filters || (filters = [])).push(exp.slice(lastFilterIndex, i).trim()) // lastFilterIndex到i直接就是一个过滤器名称
+    (filters || (filters = [])).push(exp.slice(lastFilterIndex, i).trim()) // lastFilterIndex到i就是一个过滤器名称
     lastFilterIndex = i + 1
   }
 
@@ -6365,9 +6389,9 @@ function wrapFilter (exp, filter) { //
   var i = filter.indexOf('(')
   if (i < 0) { // 如果没有左圆括号
     // _f: resolveFilter
-    return ("_f(\"" + filter + "\")(" + exp + ")")  // _f("someFilter")(exp)
+    return ("_f(\"" + filter + "\")(" + exp + ")")  // _f("someFilter")(exp) 传入exp参数
   } else {
-    var name = filter.slice(0, i) // 以左圆括号分界
+    var name = filter.slice(0, i) // 以左圆括号分界，带参数
     var args = filter.slice(i + 1)
     return ("_f(\"" + name + "\")(" + exp + "," + args) // _f("name")(exp,args)  这里args已经包含了右括号，
   }
@@ -6378,7 +6402,11 @@ function wrapFilter (exp, filter) { //
 var defaultTagRE = /\{\{((?:.|\n)+?)\}\}/g // {{.或者换行}} 至少一次，非贪婪模式
 var regexEscapeRE = /[-.*+?^${}()|[\]\/\\]/g  // 元字符
 
-var buildRegex = cached(function (delimiters) { //  delimiter是含有两个元素的数组
+/*
+ * 函数的作用是产生类似于defaultTagRE的字符串，
+ * 如果delimiters中有元字符，替换掉
+ */
+var buildRegex = cached(function (delimiters) { //  
   var open = delimiters[0].replace(regexEscapeRE, '\\$&')
   var close = delimiters[1].replace(regexEscapeRE, '\\$&')
   return new RegExp(open + '((?:.|\\n)+?)' + close, 'g')
@@ -6386,10 +6414,10 @@ var buildRegex = cached(function (delimiters) { //  delimiter是含有两个元�
 
 function parseText (  // 解析文本
   text,
-  delimiters // delimiters: Array
+  delimiters // delimiters: Array 
 ) {
   var tagRE = delimiters ? buildRegex(delimiters) : defaultTagRE
-  if (!tagRE.test(text)) {
+  if (!tagRE.test(text)) { // 不匹配就返回
     return
   }
   var tokens = []
@@ -6419,6 +6447,7 @@ function baseWarn (msg) {
 }
 /*
  * 寻找modules中的每一个module中key属性值，过滤掉空值
+ * 返回一个数组
  */
 function pluckModuleFunction (
   modules,
@@ -6451,6 +6480,7 @@ function addProp (el, name, value) {
 function addAttr (el, name, value) {
   (el.attrs || (el.attrs = [])).push({ name: name, value: value })
 }
+
 /*
  * el.directives: [
  *  {
@@ -6477,7 +6507,7 @@ function addDirective (
  * }
  * 
  */
-function addHook (el, name, code) { // code: String
+function addHook (el, name, code) { 
   var hooks = el.hooks || (el.hooks = {})
   var hook = hooks[name]
   /* istanbul ignore if */
@@ -6487,7 +6517,16 @@ function addHook (el, name, code) { // code: String
     hooks[name] = [code]
   }
 }
-
+/*
+ * 添加v-on 监听的时间
+ * el.event = {
+ *   name1: {
+ *     value: value1,
+ *     modifiers: modifiers1
+ *   },
+ *   ...
+ * }
+ */
 function addHandler (
   el,
   name,
@@ -6496,30 +6535,32 @@ function addHandler (
   important
 ) {
   // check capture modifier
-  if (modifiers && modifiers.capture) {
-    delete modifiers.capture
-    name = '!' + name // mark the event as captured
+  if (modifiers && modifiers.capture) { // 是否设置了捕获模式
+    delete modifiers.capture // 删除掉
+    name = '!' + name // mark the event as captured // 用'!' 开头标记一下
   }
   var events
-  if (modifiers && modifiers.native) {
+  if (modifiers && modifiers.native) { // 是否设置了native模式，原生事件 
+  //<my-component @click.native="onClick"></my-component>
     delete modifiers.native
-    events = el.nativeEvents || (el.nativeEvents = {})
+    events = el.nativeEvents || (el.nativeEvents = {}) // el上增加一个nativeEvents属性
   } else {
-    events = el.events || (el.events = {})
+    events = el.events || (el.events = {}) // 否则直接 添加events属性
   }
   var newHandler = { value: value, modifiers: modifiers }
   var handlers = events[name]
   /* istanbul ignore if */
-  if (Array.isArray(handlers)) {
+  // important 表示重要性，为true时，添加在事件队列最前面
+  if (Array.isArray(handlers)) { // 对应于多次添加
     important ? handlers.unshift(newHandler) : handlers.push(newHandler)
-  } else if (handlers) {
+  } else if (handlers) { // 对应于添加了一次
     events[name] = important ? [newHandler, handlers] : [handlers, newHandler]
   } else {
-    events[name] = newHandler
+    events[name] = newHandler // 对应于第一次添加
   }
 }
 /*
- * 得到绑定的属性
+ * 得到通过v-bind绑定的属性
  * 函数的作用
  * 1. 先检查是否有dynamicValue，如果有，直接返回
  * 2. 如果没有通过v-bind绑定，再检查staticValue
@@ -6568,8 +6609,8 @@ var forAliasRE = /(.*)\s+(?:in|of)\s+(.*)/ // 用于v-for
 var forIteratorRE = /\(([^,]*),([^,]*)(?:,([^,]*))?\)/
 var bindRE = /^:|^v-bind:/ // v-bind  以v_bind 或者: 开头
 var onRE = /^@|^v-on:/ // on 以@或者v-on开头
-var argRE = /:(.*)$/ 
-var modifierRE = /\.[^\.]+/g
+var argRE = /:(.*)$/ // 
+var modifierRE = /\.[^\.]+/g // 以. 开头
 
 var decodeHTMLCached = cached(decodeHTML)
 
@@ -6611,7 +6652,9 @@ function parse (
     isFromDOM: options.isFromDOM,
     shouldDecodeTags: options.shouldDecodeTags,
     shouldDecodeNewlines: options.shouldDecodeNewlines,
+    // start函数
     start: function start (tag, attrs, unary) {
+      // 检查命名空间，并且继承parent的
       // check namespace.
       // inherit parent ns if there is one
       var ns = (currentParent && currentParent.ns) || platformGetTagNamespace(tag)
@@ -6627,7 +6670,7 @@ function parse (
         tag: tag,
         attrsList: attrs,
         attrsMap: makeAttrsMap(attrs),
-        parent: currentParent,
+        parent: currentParent, 
         children: []
       }
       if (ns) {
@@ -6649,16 +6692,16 @@ function parse (
       }
 
       if (!inVPre) {
-        processPre(element)
+        processPre(element)  // 如果element[v-pre] != null  element.pre = true
         if (element.pre) {
           inVPre = true
         }
       }
-      if (platformIsPreTag(element.tag)) {
+      if (platformIsPreTag(element.tag)) { // 如果是pre标签
         inPre = true
       }
-      if (inVPre) {
-        processRawAttrs(element)
+      if (inVPre) { //
+        processRawAttrs(element) // el增加一个attrs属性
       } else {
         processFor(element)
         processIf(element)
@@ -6790,7 +6833,7 @@ function processPre (el) {
 function processRawAttrs (el) {
   var l = el.attrsList.length
   if (l) {
-    var attrs = el.attrs = new Array(l)
+    var attrs = el.attrs = new Array(l)  // el增加一个attrs属性
     for (var i = 0; i < l; i++) {
       attrs[i] = {
         name: el.attrsList[i].name,
@@ -6806,15 +6849,15 @@ function processRawAttrs (el) {
 function processKey (el) {
   var exp = getBindingAttr(el, 'key')
   if (exp) {
-    el.key = exp
+    el.key = exp // 获得key属性
   }
 }
 
 function processRef (el) {
   var ref = getBindingAttr(el, 'ref')
   if (ref) {
-    el.ref = ref
-    el.refInFor = checkInFor(el)
+    el.ref = ref // 获得fef属性
+    el.refInFor = checkInFor(el) // 是否处在v-for里
   }
 }
 
@@ -6842,11 +6885,13 @@ function processFor (el) {
     }
   }
 }
-
+/*
+ * el设置if 和 else 属性
+ */
 function processIf (el) {
   var exp = getAndRemoveAttr(el, 'v-if')
   if (exp) {
-    el.if = exp
+    el.if = exp 
   }
   if (getAndRemoveAttr(el, 'v-else') != null) {
     el.else = true
@@ -6869,7 +6914,7 @@ function processElse (el, parent) {
 function processOnce (el) {
   var once = getAndRemoveAttr(el, 'v-once')
   if (once != null) {
-    el.once = true
+    el.once = true // el 增加 once 属性
   }
 }
 
@@ -6894,46 +6939,53 @@ function processComponent (el) {
   }
 }
 
+/*
+ * 处理attrs
+ * 
+ */
 function processAttrs (el) {
   var list = el.attrsList
   var i, l, name, value, arg, modifiers, isProp
   for (i = 0, l = list.length; i < l; i++) {
     name = list[i].name
     value = list[i].value
-    if (dirRE.test(name)) {
+    if (dirRE.test(name)) { //  dirRE: /^v-|^@|^:/  表示是vue指令
       // mark element as dynamic
       el.hasBindings = true
       // modifiers
-      modifiers = parseModifiers(name)
-      if (modifiers) {
-        name = name.replace(modifierRE, '')
+      modifiers = parseModifiers(name) 
+      if (modifiers) { // 可以有多个修饰符
+        name = name.replace(modifierRE, '') // modifierRE: /\.[^\.]+/g  去掉了这些修饰符
       }
-      if (bindRE.test(name)) { // v-bind
-        name = name.replace(bindRE, '')
-        if (modifiers && modifiers.prop) {
-          isProp = true
+      if (bindRE.test(name)) { // bindRE: /^:|^v-bind:/
+        name = name.replace(bindRE, '') // 同样去掉 
+        if (modifiers && modifiers.prop) { 
+          // 有prop字面修饰符
+          // 用于绑定dom属性
+          // <div v-bind:text-content.prop="text"></div>
+          isProp = true 
           name = camelize(name)
           if (name === 'innerHtml') name = 'innerHTML'
         }
         if (isProp || platformMustUseProp(name)) {
-          addProp(el, name, value)
+          addProp(el, name, value) // 增加到el.props
         } else {
-          addAttr(el, name, value)
+          addAttr(el, name, value) // 增加到el.attrs
         }
-      } else if (onRE.test(name)) { // v-on
-        name = name.replace(onRE, '')
+      } else if (onRE.test(name)) { // 如果以v-on 或 @开头
+        name = name.replace(onRE, '') // 先去掉再说
         addHandler(el, name, value, modifiers)
       } else { // normal directives
-        name = name.replace(dirRE, '')
+        name = name.replace(dirRE, '') // 说明只是一个普通的指令
         // parse arg
-        var argMatch = name.match(argRE)
+        var argMatch = name.match(argRE)  // argRE: /:(.*)$/
         if (argMatch && (arg = argMatch[1])) {
-          name = name.slice(0, -(arg.length + 1))
+          name = name.slice(0, -(arg.length + 1)) 
         }
-        addDirective(el, name, value, arg, modifiers)
+        addDirective(el, name, value, arg, modifiers) // 推入el.directives
       }
     } else {
-      // literal attribute
+      // literal attribute // 普通的字面属性而已
       if ("development" !== 'production') {
         var expression = parseText(value, delimiters)
         if (expression) {
@@ -6944,14 +6996,13 @@ function processAttrs (el) {
           )
         }
       }
-      addAttr(el, name, JSON.stringify(value))
+      addAttr(el, name, JSON.stringify(value)) // 直接添加到attrs上
     }
   }
 }
 /*
- * 一直向上寻找
- * 如果el.for 存在，返回true,否则返回false
- * 检查是否for属性
+ * 一直向上寻找父组件的for属性
+ * 验证是否处在for 循环里 
  */
 function checkInFor (el) {
   var parent = el
@@ -6964,8 +7015,8 @@ function checkInFor (el) {
   return false
 }
 /*
- * 解析修饰符，各个修饰符存储在一个对象里
- * 如果某个修饰符存在，这个值设为true
+ * 解析修饰符，将各个修饰符存储在一个对象里
+ * 如果某个修饰符存在，在ret对象里这个值就设为true
  * 返回一个对象
  * {
  *   modifier1: true,
@@ -6993,6 +7044,7 @@ function parseModifiers (name) {
  * map: {
  *   name: value
  * }
+ * 函数的作用将一个数组形式的attrsList变成对象形式的attrs
  */
 function makeAttrsMap (attrs) {
   var map = {}
@@ -7005,8 +7057,8 @@ function makeAttrsMap (attrs) {
   return map
 }
 /*
- * 前一个元素
- * 元素必须有tag属性
+ * 找前一个元素
+ * 有tag属性就行了
  */
 function findPrevElement (children) { 
   var i = children.length
@@ -7014,7 +7066,12 @@ function findPrevElement (children) {
     if (children[i].tag) return children[i]
   }
 }
-
+/*
+ * 是否是forbiddenTag
+ * 两个条件满足其一即可
+ * 1. el.tag === 'style'
+ * 2. el.tag === 'script' 但此时 type必须是 'text/javascript'
+ */
 function isForbiddenTag (el) {
   return (
     el.tag === 'style' ||
@@ -7250,7 +7307,8 @@ function generate (
   transforms$1 = pluckModuleFunction(options.modules, 'transformCode')
   dataGenFns = pluckModuleFunction(options.modules, 'genData')
   platformDirectives$1 = options.directives || {}
-  var code = ast ? genElement(ast) : '_h("div")'
+  var code = ast ? genElement(ast) : '_h("div")' // ast就是一个el对象
+  // _h: Vue.prototype._h  createElement
   staticRenderFns = prevStaticRenderFns
   return {
     render: ("with(this){return " + code + "}"),
@@ -7264,6 +7322,7 @@ function genElement (el) {
     el.staticProcessed = true
     staticRenderFns.push(("with(this){return " + (genElement(el)) + "}"))
     return ("_m(" + (staticRenderFns.length - 1) + (el.staticInFor ? ',true' : '') + ")")
+    //_m: Vue.prototype._m  renderStatic
   } else if (el.for && !el.forProcessed) {
     return genFor(el)
   } else if (el.if && !el.ifProcessed) {
@@ -7314,7 +7373,8 @@ function genFor (el) {
     '})'
 }
 
-function genData (el) { // el.plain?
+
+function genData (el) {
   if (el.plain) {
     return
   }
@@ -7474,7 +7534,7 @@ function compile$1 (
   template,
   options
 ) {
-  var ast = parse(template.trim(), options) 
+  var ast = parse(template.trim(), options) // 返回一个ast
   optimize(ast, options)
   var code = generate(ast, options) // Object
   return {
@@ -7487,6 +7547,7 @@ function compile$1 (
 /*  */
 
 // operators like typeof, instanceof and in are allowed
+//  不能使用的关键字
 var prohibitedKeywordRE = new RegExp('\\b' + (
   'do,if,for,let,new,try,var,case,else,with,await,break,catch,class,const,' +
   'super,throw,while,yield,delete,export,import,return,switch,default,' +
@@ -7787,6 +7848,9 @@ function html (el, dir) {
   }
 }
 
+/*
+ * v-model  v-text  v-html
+ */
 var directives$1 = {
   model: model$1,
   text: text,
@@ -7811,7 +7875,8 @@ var baseOptions = {
 }
 /*
  * 编译模板
- * 
+ * 先拓展一下options
+ * 再编译
  */
 
 function compile ( 
@@ -7835,7 +7900,15 @@ function compile (
  *   render: Function,
  *   staticRenderFns: [Function, ]
  * }
+ *
+ * 传入的Options
+ *  warn: warn,
+        isFromDOM: isFromDOM,
+        shouldDecodeTags: shouldDecodeTags,
+        shouldDecodeNewlines: shouldDecodeNewlines,
+        delimiters: options.delimiters
  */
+
 function compileToFunctions (
   template,
   options,
@@ -7863,7 +7936,7 @@ function compileToFunctions (
     ? String(options.delimiters) + template
     : template
   if (cache[key]) { // cache初始化时是一个空对象
-    return cache[key]
+    return cache[key]  // 返回之前已经编译过的
   }
   var res = {}
   var compiled = compile(template, options) // 返回一个对象
@@ -7904,10 +7977,10 @@ var idToTemplate = cached(function (id) {
   return el && el.innerHTML
 })
 
-var mount = Vue.prototype.$mount // 设置一个mount全局变量
+var mount = Vue.prototype.$mount
 Vue.prototype.$mount = function (
   el,
-  hydrating // 
+  hydrating  
 ) {
   el = el && query(el)
 
@@ -7923,10 +7996,10 @@ Vue.prototype.$mount = function (
   // resolve template/el and convert to render function
   // 将el或者template转化成render函数
 
-  if (!options.render) { // render函数
+  if (!options.render) { // 不存在render选项
     var template = options.template
     var isFromDOM = false
-    if (template) {
+    if (template) {  //  如果存在template，直接在template上操作
       if (typeof template === 'string') { // template可能是以#开头的字符串
         if (template.charAt(0) === '#') {
           isFromDOM = true
@@ -7956,11 +8029,11 @@ Vue.prototype.$mount = function (
       var render = ref.render;
       var staticRenderFns = ref.staticRenderFns;
       // options获得render和staticRenderFns属性
-      options.render = render
-      options.staticRenderFns = staticRenderFns
+      options.render = render // options获得了render属性
+      options.staticRenderFns = staticRenderFns // 和 staticRenderFns属性
     }
   }
-  return mount.call(this, el, hydrating) // mount函数绑定在vm上
+  return mount.call(this, el, hydrating) 
 }
 
 /**
