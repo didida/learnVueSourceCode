@@ -216,12 +216,14 @@ var no = function () { return false; } //   一个始终返回 false 的函数
 
 /**
  * Generate a static keys string from compiler modules.
+ * 传入的 modules是一个数组
+ * 返回一个 string
  */
 function genStaticKeys (modules) {
   return modules.reduce(function (keys, m) {
     return keys.concat(m.staticKeys || [])
   }, []).join(',')
-}  //  ？？？？
+}  // [m1.staticKeys, m2.staticKeys, ...].join(',')
 
 /*  */
 
@@ -343,7 +345,7 @@ function def (obj, key, val, enumerable) {
 /**
  * Parse simple path.  解析一个路径
  */
-var bailRE = /[^\w\.\$]/  
+var bailRE = /[^\w\.\$]/   // 不以 \w \. \$ 开头
 /*
  * 如果 path = 'a.b.c'
  * obj = {
@@ -466,17 +468,17 @@ var _Set
 /* istanbul ignore if */
 if (typeof Set !== 'undefined' && /native code/.test(Set.toString())) {
   // use native Set when available.
-  _Set = Set
+  _Set = Set 
 } else {
   // a non-standard Set polyfill that only works with primitive keys.
-  _Set = (function () {  // set的数据结构此时是个对象，和ES6的Set不同
+  _Set = (function () {  
     function Set () {
       this.set = Object.create(null)
     }
     Set.prototype.has = function has (key) {
       return this.set[key] !== undefined
     };
-    Set.prototype.add = function add (key) {  // 只是增加一个键，值设为1
+    Set.prototype.add = function add (key) {  // 只是增加一个键，值都是设为1
       this.set[key] = 1
     };
     Set.prototype.clear = function clear () {
@@ -1247,6 +1249,10 @@ function initState (vm) {
 
 /*
  * 初始化props
+ * 做了这么几件事
+ * vm.$optons上增加了 _propKeys属性
+ * props 对象里的每一个属性都变成了 vm的直接属性
+ * 同时 完成了验证 props 这个步骤 
  */
 function initProps (vm) {   
   var props = vm.$options.props   
@@ -1300,7 +1306,7 @@ function initData (vm) {
   data = vm._data = typeof data === 'function'  // vm增加一个直接属性_data，注意，不是在vm.$options上添加
     ? data.call(vm)   // 执行data这个函数，返回一个对象
     : data || {}  // 如果不是函数，data为vm.$options.data,如果不存在，默认设置为一个空对象{}
-  if (!isPlainObject(data)) {  // 函数必须返回一个对象
+  if (!isPlainObject(data)) {  // data 必须是一个对象
     data = {}
     "development" !== 'production' && warn(
       'data functions should return an object.',
@@ -1309,7 +1315,7 @@ function initData (vm) {
   }
   // 得到data对象后，开始对它处理
   // proxy data on instance
-  var keys = Object.keys(data)  // 获得data的属性数组
+  var keys = Object.keys(data)  // 获得data的全部属性
   var props = vm.$options.props  // 获得props
   var i = keys.length 
   while (i--) {
@@ -1320,16 +1326,16 @@ function initData (vm) {
         vm
       )
     } else {
-      proxy(vm, keys[i])  
+      proxy(vm, keys[i]) // proxy 函数处理 
       // 
     }
   }
   // observe data
-  observe(data) // 
-  data.__ob__ && data.__ob__.vmCount++ // 
+  observe(data) // 产生一个 observer
+  data.__ob__ && data.__ob__.vmCount++ // ？
 }
 
-var computedSharedDefinition = { // 属性修饰符
+var computedSharedDefinition = { // computed属性修饰符
   enumerable: true,
   configurable: true,
   get: noop, 
@@ -1350,15 +1356,15 @@ function initComputed (vm) {
       // usrtDef可以是对象，也可以是个函数，如果是个对象，对象中应该有 get 和 set 函数
       
       if (typeof userDef === 'function') { // 如果是函数
-        computedSharedDefinition.get = makeComputedGetter(userDef, vm)   //??????
+        computedSharedDefinition.get = makeComputedGetter(userDef, vm) // 设置 get 函数
         computedSharedDefinition.set = noop
       } else {
         computedSharedDefinition.get = userDef.get  // 如果是个对象，先检查有没有get属性，
-          ? userDef.cache !== false  // 如果有，检查cache 属性是否为true
-            ? makeComputedGetter(userDef.get, vm) // cache为true,使用这种方法绑定 
-            : bind(userDef.get, vm) // 否则使用这种方式绑定
+          ? userDef.cache !== false  // 如果有，检查cache属性
+            ? makeComputedGetter(userDef.get, vm) // 
+            : bind(userDef.get, vm) // 如果cache 存在，绑定上下文
           : noop //如果get属性不存在，空函数，什么都不做
-        computedSharedDefinition.set = userDef.set //  set属性如果存在，绑定之
+        computedSharedDefinition.set = userDef.set //  set属性如果存在，绑定上下文
           ? bind(userDef.set, vm)
           : noop // 否则什么都不做
       }
@@ -1386,6 +1392,8 @@ function makeComputedGetter (getter, owner) {  //  useDef:function
 }
 /*
  * 将methods中定义的方法绑定到vm上
+ * 同时定义为vm的属性
+ * 可以通过 this.methodName 访问
  */
 function initMethods (vm) { 
   var methods = vm.$options.methods  
@@ -1448,7 +1456,7 @@ function stateMixin (Vue) {
   // the object here.
   var dataDef = {}
   dataDef.get = function () {
-    return this._data
+    return this._data // initData 时已经设置，
   }
   if ("development" !== 'production') {
     dataDef.set = function (newData) {
@@ -1459,7 +1467,7 @@ function stateMixin (Vue) {
       )
     }
   }
-  Object.defineProperty(Vue.prototype, '$data', dataDef)  // ******
+  Object.defineProperty(Vue.prototype, '$data', dataDef)  // vm.$data = this._data 只是初始化时传入的 data
 
   Vue.prototype.$set = set
   Vue.prototype.$delete = del
@@ -1508,10 +1516,10 @@ var VNode = function VNode (
   data,
   children,
   text,
-  elm,
+  elm, 
   ns,  //  命名空间  namespace
   context,
-  componentOptions
+  componentOptions 
 ) {
   this.tag = tag
   this.data = data
@@ -1533,7 +1541,7 @@ var VNode = function VNode (
   // apply construct hook.
   // this is applied during render, before patch happens.
   // unlike other hooks, this is applied on both client and server.
-  var constructHook = data && data.hook && data.hook.construct  // data还有一个hook属性，hook还有一个construct属性？
+  var constructHook = data && data.hook && data.hook.construct  // data hook属性，hook还有一个construct属性
   if (constructHook) {
     constructHook(this)
   }
@@ -1577,8 +1585,11 @@ function cloneVNodes (vnodes) {  //  批量复制
 
 /*
  * 函数的作用
+ * 传入的 children 可以是一个原始值，或一个数组，
+ * 最终返回的是一个元素是vnode结点的数组
+ *
+ * 如果是原始值，返回一个是文本结点的数组
  * 
- * 返回一个子组件数组
  */
 
 function normalizeChildren (  //   标准化子组件，
@@ -1587,26 +1598,26 @@ function normalizeChildren (  //   标准化子组件，
   nestedIndex  //  嵌套层次
 ) {
   if (isPrimitive(children)) {  //  如果传入的children是一个原始值
-    return [createTextVNode(children)] // 返回一个数组，数组元素是一个文本结点
+    return [createTextVNode(children)] // 返回一个文本结点 并包装成数组
   }
   if (Array.isArray(children)) {  // 如果是一个数组
-    var res = []  // 要返回的结果
+    var res = [] 
     for (var i = 0, l = children.length; i < l; i++) {
       var c = children[i]
-      var last = res[res.length - 1]  //  每一次遍历，last都指向最后一个元素
+      var last = res[res.length - 1]  //  每一次遍历，last都指向res当前最后一个元素
       //  nested
       if (Array.isArray(c)) {  // 如果还是一个数组
         res.push.apply(res, normalizeChildren(c, ns, i))
       } else if (isPrimitive(c)) {  //  如果c是原始值
         if (last && last.text) {  // 如果最后一个元素存在，而且最后一个元素的text存在，那么直接加上
           last.text += String(c)
-        } else if (c !== '') { // 如果最后一个元素不存在
+        } else if (c !== '') { // 如果最后一个元素不存在或者没有text属性，且当前原始值不是一个空字符串
           // convert primitive to vnode
           res.push(createTextVNode(c)) // 新建一个文本结点
         }
-      } else if (c instanceof VNode) {  //  如果c是一个vnode结点
+      } else if (c instanceof VNode) {  //  如果c已经是一个vnode结点
         if (c.text && last && last.text) {
-          last.text += c.text
+          last.text += c.text // 把text 加到一起
         } else {
           // inherit parent namespace
           if (ns) {
@@ -1620,7 +1631,7 @@ function normalizeChildren (  //   标准化子组件，
         }
       }
     }
-    return res
+    return res // res是一个vnode数组
   }
 }
 
@@ -1669,8 +1680,8 @@ function mergeVNodeHook (def, key, hook) {
 }
 
 function updateListeners ( 
-  on,  //  对象
-  oldOn, // 同样一个对象
+  on,  //  on对象
+  oldOn, //
   add,  // 要增加的监听函数
   remove // 要移除的监听函数
 ) {
@@ -1689,8 +1700,8 @@ function updateListeners (
       capture = name.charAt(0) === '!' // 是否以 ! 开头
       event = capture ? name.slice(1) : name  // 如果name 不是以!开头，name直接赋值给event，否则，去掉!后再赋值给event
       if (Array.isArray(cur)) {  // cur 可以是数组，数组元素是函数
-        add(event, (cur.invoker = arrInvoker(cur)), capture)  //  add？
-      } else {  // old 存在
+        add(event, (cur.invoker = arrInvoker(cur)), capture)  // 传入的 add 函数
+      } else {  // 如果cur不是数组
         if (!cur.invoker) {  // 如果 cur.invoker不存在
           fn = cur  
           cur = on[name] = {}
@@ -1722,7 +1733,7 @@ function arrInvoker (arr) {
   return function (ev) {
     var arguments$1 = arguments;  //  ev
 
-    var single = arguments.length === 1 //  是否只传入了一个参数 Boolean
+    var single = arguments.length === 1 
     for (var i = 0; i < arr.length; i++) {
       single ? arr[i](ev) : arr[i].apply(null, arguments$1) // arr是一个函数数组，依次执行里面的函数
       // 如果只传入一个参数，直接执行，否则，使用apply方法。
@@ -1756,8 +1767,9 @@ function initLifecycle (vm) {  // 生命周期初始化，初始化一些属性
   var options = vm.$options  //  获得options
 
   // locate first non-abstract parent  // 找到第一个 non-abstract 父组件
-  var parent = options.parent  //  对组件的父组件的引用
-  if (parent && !options.abstract) {  // abstract ?  parent存在，且abstract属性为false
+  // abstract: it doesn’t render a DOM element itself, and doesn’t show up in the component parent chain.
+  var parent = options.parent  
+  if (parent && !options.abstract) {  
     while (parent.$options.abstract && parent.$parent) {  // 一旦碰到abstract为true,或者$parent不存在，循环终止
       parent = parent.$parent
     } 
@@ -1959,8 +1971,11 @@ function callHook (vm, hook) {
 var hooks = { init: init, prepatch: prepatch, insert: insert, destroy: destroy }
 var hooksToMerge = Object.keys(hooks) //  ['init','prepatch','insert','destroy']
 
+/*
+ * 产生一个组件
+ */
 function createComponent (
-  Ctor,
+  Ctor, // option对象 或者 一个构造函数
   data,
   context,
   children,
@@ -2012,9 +2027,9 @@ function createComponent (
 
   // extract listeners, since these needs to be treated as
   // child component listeners instead of DOM listeners
-  var listeners = data.on
+  var listeners = data.on // on 属性
   // replace with listeners with .native modifier
-  data.on = data.nativeOn
+  data.on = data.nativeOn // nativeOn 属性
 
   if (Ctor.options.abstract) {
     // abstract components do not keep anything
@@ -2130,7 +2145,7 @@ function destroy (vnode) {
 /*
  * 
  */
-function resolveAsyncComponent ( // ????
+function resolveAsyncComponent ( // 异步组件
   factory, // 传入的是一个Ctor
   cb
 ) {
@@ -2198,20 +2213,21 @@ function extractProps (data, Ctor) {
   var domProps = data.domProps;
   if (attrs || props || domProps) {
     for (var key in propOptions) {
-      var altKey = hyphenate(key)
+      var altKey = hyphenate(key)  // 驼峰变成连字符形式
+      // 如果有第一个checkProp返回true 后面的也就不会执行了
       checkProp(res, props, key, altKey, true) ||
       checkProp(res, attrs, key, altKey) ||
       checkProp(res, domProps, key, altKey)
     }
   }
-  return res
+  return res // res 获得了 props attrs domProps 的属性
 }
 /*
  * 函数的作用是
  * 提供一个key或者altkey
  * 首先检查hash中是否有key或者altkey属性，都没有就返回false
  * 如果有的话，给res[key]，返回true.
- * 然后根据preserve决定是否在hash中保留
+ * 然后根据preserve决定是否在hash中保留， 默认为false 
  */
 function checkProp (
   res,
@@ -2256,6 +2272,10 @@ function mergeHooks (data) {
   }
 }
 
+/*
+ * 分别执行
+ * 先执行ours, 再执行 fromParents
+ */
 function mergeHook$1 (a, b) {
   // since all hooks have at most two args, use fixed args
   // to avoid having to use fn.apply().
@@ -2270,9 +2290,9 @@ function mergeHook$1 (a, b) {
 // wrapper function for providing a more flexible interface
 // without getting yelled at by flow
 function createElement (
-  tag,
-  data,
-  children
+  tag, // tag: Function | String | Object
+  data, // Object
+  children // Array | String
 ) {
   // 可以省略data
   // 当第二个参数为数组或者原始值时，vue会认为传入的是children，而未传入data，最终data设为undefined，child设为data
@@ -2307,11 +2327,12 @@ function _createElement (
     var ns = config.getTagNamespace(tag)
     if (config.isReservedTag(tag)) {
       // platform built-in elements
-      return new VNode(
+      return new VNode( // 如果是 reservedTag，调用 vNode 函数
         tag, data, normalizeChildren(children, ns),
         undefined, undefined, ns, context
       )
-    } else if ((Ctor = resolveAsset(context.$options, 'components', tag))) {
+    } else if ((Ctor = resolveAsset(context.$options, 'components', tag))) { // 或者是在options中定义的组件
+      // resolveAsset 返回的 是 context.$options[components][tag] 返回一个函数或是option 对象
       // component
       return createComponent(Ctor, data, context, children, tag)
     } else {
@@ -2551,12 +2572,12 @@ function resolveSlots (
   if (!renderChildren) {
     return slots
   }
-  var children = normalizeChildren(renderChildren) || []
+  var children = normalizeChildren(renderChildren) || [] // 返回一个vnode数组
   var defaultSlot = []
   var name, child
   for (var i = 0, l = children.length; i < l; i++) {
     child = children[i]
-    if (child.data && (name = child.data.slot)) {
+    if (child.data && (name = child.data.slot)) { 
       delete child.data.slot
       var slot = (slots[name] || (slots[name] = []))
       if (child.tag === 'template') {
@@ -3158,8 +3179,8 @@ function normalizeDirectives (options) {  // 标准化指令选项
  * Core utility used in both instantiation and inheritance.
  */
 function mergeOptions (
-  parent,
-  child, // child的选项?
+  parent, // parentOptions
+  child, // childOptions
   vm
 ) {
   // normaoize child的options.components,options.props,options.directives
@@ -4884,7 +4905,7 @@ var domProps = {
   update: updateDOMProps
 }
 
-/*got*/ 
+/*  */ 
 
 var prefixes = ['Webkit', 'Moz', 'ms']
 
@@ -5028,7 +5049,7 @@ if (hasTransition) {
   }
 }
 
-var raf = (inBrowser && window.requestAnimationFrame) || setTimeout  // ????
+var raf = (inBrowser && window.requestAnimationFrame) || setTimeout  // 
 function nextFrame (fn) {
   raf(function () {
     raf(fn)
@@ -5046,7 +5067,9 @@ function removeTransitionClass (el, cls) {
   }
   removeClass(el, cls)
 }
-
+/*
+ * 定义渐变结束后执行的事件
+ */
 function whenTransitionEnds (
   el,
   expectedType,
@@ -5080,6 +5103,11 @@ function whenTransitionEnds (
 
 var transformRE = /\b(transform|all)(,|$)/
 
+/*
+ * 函数返回一个对象
+ * 包含对象的 type timeout
+ * propCount 和 hasTransform信息
+ */
 function getTransitionInfo (el, expectedType) { // expectedType 只是表示 是渐变还是动画
   var styles = window.getComputedStyle(el) // 获得全部的计算属性
   var transitioneDelays = styles[transitionProp + 'Delay'].split(', ') // Array 渐变延迟时间
@@ -5129,6 +5157,9 @@ function getTransitionInfo (el, expectedType) { // expectedType 只是表示 是
   }
 }
 
+/*
+ * 返回一个最大的时间间隔
+ */
 function getTimeout (delays, durations) {
  // delays 和 durations为长度相同的的数组，将两个数组的每一项相加取一个最大值
   return Math.max.apply(null, durations.map(function (d, i) {
@@ -5136,6 +5167,9 @@ function getTimeout (delays, durations) {
   }))
 }
 
+/*
+ * 秒变毫秒
+ */
 function toMs (s) { // 秒变毫秒
   return Number(s.slice(0, -1)) * 1000  // 这里的s.slice(0,-1) 表示去掉最后一个秒的单位s 
 }
@@ -5341,7 +5375,10 @@ function leave (vnode, rm) {
     }
   }
 }
-
+/*
+ * and return an object
+ * 生成一个对象 对象包含一些 class 属性
+ */
 function resolveTransition (def) { // def: Object | String 
   if (!def) {
     return
@@ -5350,12 +5387,12 @@ function resolveTransition (def) { // def: Object | String
   if (typeof def === 'object') { 
     var res = {}
     if (def.css !== false) { // def.css?
-      extend(res, autoCssTransition(def.name || 'v'))
+      extend(res, autoCssTransition(def.name || 'v')) // 如果没有给出 transition 的 name ，默认是v
     }
     extend(res, def)
     return res
   } else if (typeof def === 'string') {
-    return autoCssTransition(def)
+    return autoCssTransition(def) // 
   }
 }
 
@@ -5370,6 +5407,9 @@ var autoCssTransition = cached(function (name) {
   }
 })
 
+/*
+ * 根据called判断是否执行过，返回一个函数
+ */
 function once (fn) {
   var called = false
   return function () {
@@ -6518,7 +6558,8 @@ function addHook (el, name, code) {
   }
 }
 /*
- * 添加v-on 监听的时间
+ * 添加v-on 监听的事件
+ * el上添加 events 或者 nativeEvents属性
  * el.event = {
  *   name1: {
  *     value: value1,
@@ -6535,7 +6576,7 @@ function addHandler (
   important
 ) {
   // check capture modifier
-  if (modifiers && modifiers.capture) { // 是否设置了捕获模式
+  if (modifiers && modifiers.capture) { // 是否设置了捕获模式 对应有capture修饰符
     delete modifiers.capture // 删除掉
     name = '!' + name // mark the event as captured // 用'!' 开头标记一下
   }
@@ -6553,7 +6594,7 @@ function addHandler (
   // important 表示重要性，为true时，添加在事件队列最前面
   if (Array.isArray(handlers)) { // 对应于多次添加
     important ? handlers.unshift(newHandler) : handlers.push(newHandler)
-  } else if (handlers) { // 对应于添加了一次
+  } else if (handlers) { // 对应于第二次添加
     events[name] = important ? [newHandler, handlers] : [handlers, newHandler]
   } else {
     events[name] = newHandler // 对应于第一次添加
@@ -7116,7 +7157,7 @@ var genStaticKeysCached = cached(genStaticKeys$1)
  *    create fresh nodes for them on each re-render;
  * 2. Completely skip them in the patching process.
  */
-function optimize (root, options) { // ast options
+function optimize (root, options) { // ast, options
   if (!root) return
   isStaticKey = genStaticKeysCached(options.staticKeys || '')
   isPlatformReservedTag = options.isReservedTag || (function () { return false; })
@@ -7148,7 +7189,7 @@ function markStatic (node) { // root
 
 function markStaticRoots (node, isInFor) {
   if (node.type === 1) {
-    if (node.once || node.static) { // 这里要先使用到static属性
+    if (node.once || node.static) { // 如果 once 和 static 属性存在
       node.staticRoot = true // 增加一个staticRoot属性
       node.staticInFor = isInFor // 增加一个staticInFor属性
       return
@@ -7444,6 +7485,10 @@ function genData (el) {
   return data.replace(/,$/, '') + '}'
 }
 
+/*
+ * 产生 directives 指令
+ * 
+ */
 function genDirectives (el) {
   var dirs = el.directives // Array
   if (!dirs) return
@@ -7663,7 +7708,7 @@ var klass$1 = {
 }
 
 /*  */
-
+// el 的 styleBinding 属性
 function transformNode$1 (el) {
   var styleBinding = getBindingAttr(el, 'style', false /* getStatic */)
   if (styleBinding) {
@@ -7781,9 +7826,11 @@ function genDefaultModel (
 
   var type = el.attrsMap.type
   var ref = modifiers || {};
+  // 分别是 lazy trim number 修饰符
   var lazy = ref.lazy;
   var number = ref.number;
   var trim = ref.trim;
+
   var event = lazy || (isIE && type === 'range') ? 'change' : 'input'
   var needCompositionGuard = !lazy && type !== 'range'
   var isNative = el.tag === 'input' || el.tag === 'textarea'
@@ -7864,9 +7911,9 @@ var cache = Object.create(null)
 var baseOptions = {
   isIE: isIE,
   expectHTML: true,
-  modules: modules$1,
+  modules: modules$1, // klass$1 style$1
   staticKeys: genStaticKeys(modules$1),
-  directives: directives$1,
+  directives: directives$1, // v-model v-text v-html
   isReservedTag: isReservedTag,
   isUnaryTag: isUnaryTag,
   mustUseProp: mustUseProp,
@@ -7978,8 +8025,11 @@ var idToTemplate = cached(function (id) {
 })
 
 var mount = Vue.prototype.$mount
+/*
+ * 函数作用是
+ */
 Vue.prototype.$mount = function (
-  el,
+  el, // selector
   hydrating  
 ) {
   el = el && query(el)
